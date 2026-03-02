@@ -7,6 +7,8 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FlightMessage } from '@/types';
+import { useFlightStore } from '@/stores/flightStore';
+import { ensureAmPmUpperCase } from '@/lib/utils';
 
 interface FlightMessagesModalProps {
   isOpen: boolean;
@@ -25,17 +27,18 @@ function formatFlightTime(ms: number): string {
 }
 
 /** Compute clock time string in local timezone from flight start ISO + offset ms */
-function formatClockTime(flightStartTime: string | null, offsetMs: number): string {
+function formatClockTime(flightStartTime: string | null, offsetMs: number, hour12 = true): string {
   if (!flightStartTime) return '—';
   try {
     const startMs = new Date(flightStartTime).getTime();
     if (isNaN(startMs)) return '—';
     const clockDate = new Date(startMs + offsetMs);
-    return clockDate.toLocaleTimeString(undefined, {
+    return ensureAmPmUpperCase(clockDate.toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-    });
+      hour12,
+    }));
   } catch {
     return '—';
   }
@@ -48,6 +51,8 @@ export function FlightMessagesModal({
   flightStartTime,
 }: FlightMessagesModalProps) {
   const { t } = useTranslation();
+  const timeFormat = useFlightStore((state) => state.timeFormat);
+  const hour12 = timeFormat !== '24h';
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape key
@@ -169,7 +174,7 @@ export function FlightMessagesModal({
                 >
                   {/* Clock time */}
                   <span className="text-[11px] font-medium text-gray-200 tabular-nums leading-tight">
-                    {formatClockTime(flightStartTime, msg.timestampMs)}
+                    {formatClockTime(flightStartTime, msg.timestampMs, hour12)}
                   </span>
 
                   {/* Flight time */}
