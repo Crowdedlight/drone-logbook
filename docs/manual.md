@@ -821,6 +821,7 @@ Required for decrypting V13+ DJI flight logs.
 - The app ships with a default key
 - You can add your own personal key for better rate limits
 - See the README for instructions on obtaining a key
+- **Docker users**: Set the `DJI_API_KEY` environment variable instead of using the settings UI (e.g., `- DJI_API_KEY=your_key_here` in `docker-compose.yml`)
 
 #### Status Indicators
 

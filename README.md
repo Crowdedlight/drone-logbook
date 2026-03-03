@@ -271,7 +271,8 @@ When `KEEP_UPLOADED_FILES=true` is set, original log files are preserved in an `
 |-----------------|------------------------|-----------------------------------------------------------------------------|
 | `DATA_DIR`      | `/data/drone-logbook`  | Database and config storage                                                 |
 | `RUST_LOG`      | `info`                 | Log level (debug, info, warn)                                               |
-| `SYNC_LOGS_PATH`| (not set)              | Path to internal folder for automatic log import (e.g., `/sync-logs`)        |
+| `DJI_API_KEY`   | (bundled default)      | Set your own for better rate limits. See [How to obtain your own DJI Developer API key](#how-to-obtain-your-own-dji-developer-api-key). |
+| `SYNC_LOGS_PATH`| (not set)              | Path to internal folder for automatic log import (e.g., `/sync-logs`)       |
 | `SYNC_INTERVAL` | (not set)              | Cron expression for scheduled sync (e.g., `0 0 */8 * * *` for every 8 hours)|
 | `KEEP_UPLOADED_FILES` | `true`      | When `true`, keeps copies of uploaded log files in the `uploaded` folder    |
 
