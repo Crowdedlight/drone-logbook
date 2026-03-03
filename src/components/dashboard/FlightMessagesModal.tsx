@@ -68,6 +68,7 @@ export function FlightMessagesModal({
   if (!isOpen) return null;
 
   const sorted = [...messages].sort((a, b) => a.timestampMs - b.timestampMs);
+  const cautionCount = sorted.filter((m) => m.messageType === 'caution').length;
   const warnCount = sorted.filter((m) => m.messageType === 'warn').length;
   const tipCount = sorted.filter((m) => m.messageType === 'tip').length;
 
@@ -112,6 +113,14 @@ export function FlightMessagesModal({
 
           {/* Summary badges */}
           <div className="flex items-center gap-2">
+            {cautionCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-[13px] font-medium px-2.5 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/30">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {cautionCount}
+              </span>
+            )}
             {warnCount > 0 && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -164,12 +173,13 @@ export function FlightMessagesModal({
             </div>
           ) : (
             sorted.map((msg, idx) => {
+              const isCaution = msg.messageType === 'caution';
               const isWarn = msg.messageType === 'warn';
               return (
                 <div
                   key={idx}
                   className={`grid grid-cols-[72px_64px_1fr] gap-x-3 items-baseline px-5 py-3 transition-colors ${
-                    isWarn ? 'hover:bg-amber-900/10' : 'hover:bg-blue-900/10'
+                    isCaution ? 'hover:bg-red-900/10' : isWarn ? 'hover:bg-amber-900/10' : 'hover:bg-blue-900/10'
                   }`}
                 >
                   {/* Clock time */}
@@ -184,7 +194,21 @@ export function FlightMessagesModal({
 
                   {/* Icon + message */}
                   <div className="flex items-start gap-2 min-w-0">
-                    {isWarn ? (
+                    {isCaution ? (
+                      <svg
+                        className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    ) : isWarn ? (
                       <svg
                         className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5"
                         fill="none"
@@ -215,7 +239,7 @@ export function FlightMessagesModal({
                     )}
                     <span
                       className={`text-sm leading-snug break-words min-w-0 ${
-                        isWarn ? 'text-amber-200' : 'text-blue-200'
+                        isCaution ? 'text-red-200' : isWarn ? 'text-amber-200' : 'text-blue-200'
                       }`}
                     >
                       {msg.message}

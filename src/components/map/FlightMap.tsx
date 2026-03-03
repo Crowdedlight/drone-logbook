@@ -1666,11 +1666,18 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
       {/* Message popup — centered at top during playback */}
       {activeMessage && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none max-w-[400px]">
-          <div className={`flex items-start gap-2.5 rounded-lg px-3.5 py-2.5 shadow-lg backdrop-blur ${activeMessage.messageType === 'warn'
-            ? 'bg-amber-900/90 border border-amber-600/60'
-            : 'bg-blue-900/90 border border-blue-600/60'
+          <div className={`flex items-start gap-2.5 rounded-lg px-3.5 py-2.5 shadow-lg backdrop-blur ${
+            activeMessage.messageType === 'caution'
+              ? 'bg-red-900/90 border border-red-600/60'
+              : activeMessage.messageType === 'warn'
+                ? 'bg-amber-900/90 border border-amber-600/60'
+                : 'bg-blue-900/90 border border-blue-600/60'
             }`}>
-            {activeMessage.messageType === 'warn' ? (
+            {activeMessage.messageType === 'caution' ? (
+              <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : activeMessage.messageType === 'warn' ? (
               <svg className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
@@ -1679,7 +1686,9 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            <span className={`text-sm font-medium ${activeMessage.messageType === 'warn' ? 'text-amber-100' : 'text-blue-100'
+            <span className={`text-sm font-medium ${
+              activeMessage.messageType === 'caution' ? 'text-red-100'
+                : activeMessage.messageType === 'warn' ? 'text-amber-100' : 'text-blue-100'
               }`}>
               {activeMessage.message}
             </span>

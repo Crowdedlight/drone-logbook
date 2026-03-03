@@ -319,14 +319,14 @@ impl Database {
             );
 
             -- ============================================================
-            -- FLIGHT_MESSAGES TABLE: App messages (tips/warnings) per flight
+            -- FLIGHT_MESSAGES TABLE: App messages (tips/warnings/cautions) per flight
             -- ============================================================
             CREATE TABLE IF NOT EXISTS flight_messages (
                 flight_id       BIGINT NOT NULL,
                 timestamp_ms    BIGINT NOT NULL,
-                message_type    VARCHAR NOT NULL,        -- 'tip' or 'warn'
+                message_type    VARCHAR NOT NULL,        -- 'tip', 'warn', or 'caution'
                 message         VARCHAR NOT NULL,
-                PRIMARY KEY (flight_id, timestamp_ms, message_type)
+                PRIMARY KEY (flight_id, timestamp_ms, message_type, message)
             );
 
             CREATE INDEX IF NOT EXISTS idx_flight_messages_flight 
@@ -338,6 +338,7 @@ impl Database {
         Self::migrate_flights_table(&conn)?;
         Self::migrate_telemetry_table(&conn)?;
         Self::migrate_flight_tags_table(&conn)?;
+        Self::migrate_flight_messages_table(&conn)?;
 
         // Run type optimization migration (DOUBLE -> FLOAT for non-critical metrics)
         // Must run before column order check since it recreates the table
@@ -455,6 +456,71 @@ impl Database {
             "UPDATE flight_tags SET tag_type = 'auto' WHERE tag_type IS NULL;",
         )?;
         
+        Ok(())
+    }
+
+    /// Migrate flight_messages table — expand PK to include message text.
+    /// Old PK was (flight_id, timestamp_ms, message_type) which silently dropped
+    /// multiple messages at the same timestamp+type. State-change tracking can
+    /// produce several messages per frame, so we need the wider key.
+    fn migrate_flight_messages_table(conn: &Connection) -> Result<(), DatabaseError> {
+        const MIGRATION_KEY: &str = "flight_messages_pk_expanded";
+
+        let already_migrated: bool = conn
+            .query_row(
+                "SELECT value FROM settings WHERE key = ?",
+                params![MIGRATION_KEY],
+                |row| row.get::<_, String>(0),
+            )
+            .map(|v| v == "true")
+            .unwrap_or(false);
+
+        if already_migrated {
+            return Ok(());
+        }
+
+        // Check if the table exists at all
+        let table_exists: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM information_schema.tables WHERE table_name = 'flight_messages'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !table_exists {
+            // Table will be created by the main schema; just mark done
+            conn.execute(
+                "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                params![MIGRATION_KEY, "true"],
+            )?;
+            return Ok(());
+        }
+
+        log::info!("Migrating flight_messages table: expanding primary key to include message text");
+
+        conn.execute_batch(
+            r#"
+            CREATE TABLE flight_messages_new (
+                flight_id       BIGINT NOT NULL,
+                timestamp_ms    BIGINT NOT NULL,
+                message_type    VARCHAR NOT NULL,
+                message         VARCHAR NOT NULL,
+                PRIMARY KEY (flight_id, timestamp_ms, message_type, message)
+            );
+            INSERT INTO flight_messages_new SELECT * FROM flight_messages;
+            DROP TABLE flight_messages;
+            ALTER TABLE flight_messages_new RENAME TO flight_messages;
+            CREATE INDEX IF NOT EXISTS idx_flight_messages_flight ON flight_messages(flight_id);
+            "#,
+        )?;
+
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            params![MIGRATION_KEY, "true"],
+        )?;
+
+        log::info!("flight_messages PK migration complete");
         Ok(())
     }
 

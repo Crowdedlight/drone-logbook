@@ -71,10 +71,10 @@ export interface TelemetryData {
   flightMode?: (string | null)[];
 }
 
-/** App tip/warning message from DJI flight log */
+/** App tip/warning/caution message from DJI flight log */
 export interface FlightMessage {
   timestampMs: number;
-  messageType: 'tip' | 'warn';
+  messageType: 'tip' | 'warn' | 'caution';
   message: string;
 }
 

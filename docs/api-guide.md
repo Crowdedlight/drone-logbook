@@ -309,7 +309,7 @@ interface OverviewStats {
 ```typescript
 interface FlightMessage {
   timestampMs: number;       // Milliseconds from flight start
-  messageType: 'tip' | 'warn';
+  messageType: 'tip' | 'warn' | 'caution';
   message: string;
 }
 ```

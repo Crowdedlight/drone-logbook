@@ -165,7 +165,7 @@ pub struct TelemetryRecord {
 #[serde(rename_all = "camelCase")]
 pub struct FlightMessage {
     pub timestamp_ms: i64,
-    pub message_type: String, // "tip" or "warn"
+    pub message_type: String, // "tip", "warn", or "caution"
     pub message: String,
 }
 

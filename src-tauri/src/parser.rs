@@ -1023,16 +1023,97 @@ impl<'a> LogParser<'a> {
             100 // default 10Hz assumption
         };
 
-        let mut prev_voltage_warning = 0;
-        let mut prev_compass_error = false;
-        let mut prev_motor_blocked = false;
-        let mut prev_wave_error = false;
-        let mut prev_barometer_dead = false;
-        let mut prev_accel_over = false;
-        let mut prev_not_enough_force = false;
-        let mut prev_out_of_limit = false;
+        // ----------------------------------------------------------------
+        // OSD + Gimbal state change tracking
+        // Track all OSD status fields and gimbal.is_stuck. When a value
+        // changes between consecutive frames, emit a message:
+        //   "XXX changed from YYY to ZZZ"
+        // Severity mapping:
+        //   caution — hardware/sensor errors (compass, motor, barometer, IMU, …)
+        //   warn    — operational warnings (voltage, vibration, limits, RTH, …)
+        //   tip     — informational (vision, IOC, …)
+        // ----------------------------------------------------------------
+
+        // Helper formatting closures
+        fn fmt_bool(v: bool) -> &'static str { if v { "Yes" } else { "No" } }
+        fn fmt_voltage_warning(v: u8) -> String {
+            match v {
+                0 => "Normal".to_string(),
+                1 => "Low".to_string(),
+                2 => "Severe Low".to_string(),
+                3 => "Smart Low".to_string(),
+                n => format!("Level {}", n),
+            }
+        }
+        fn fmt_opt_enum<T: std::fmt::Debug>(v: &Option<T>) -> String {
+            match v {
+                Some(val) => format!("{:?}", val),
+                None => "None".to_string(),
+            }
+        }
+
+        // Previous-state trackers (Option<_> = None means first frame, skip)
+        // --- Caution-level (hardware / sensor errors) ---
+        let mut prev_is_compass_error: Option<bool> = None;
+        let mut prev_is_motor_blocked: Option<bool> = None;
+        let mut prev_is_barometer_dead_in_air: Option<bool> = None;
+        let mut prev_is_acceletor_over_range: Option<bool> = None;
+        let mut prev_is_not_enough_force: Option<bool> = None;
+        let mut prev_is_propeller_catapult: Option<bool> = None;
+        let mut prev_motor_start_failed_cause: Option<String> = None;
+        let mut prev_imu_init_fail_reason: Option<String> = None;
+        let mut prev_gimbal_is_stuck: Option<bool> = None;
+
+        // --- Warning-level (operational) ---
+        let mut prev_voltage_warning: Option<u8> = None;
+        let mut prev_wave_error: Option<bool> = None;
+        let mut prev_is_out_of_limit: Option<bool> = None;
+        let mut prev_go_home_status: Option<String> = None;
+        let mut prev_is_vibrating: Option<bool> = None;
+        let mut prev_is_go_home_height_modified: Option<bool> = None;
+        let mut prev_non_gps_cause: Option<String> = None;
+
+        // --- Info-level (informational) ---
+        let mut prev_is_vision_used: Option<bool> = None;
+        let mut prev_is_imu_preheated: Option<bool> = None;
+        let mut prev_can_ioc_work: Option<bool> = None;
+
+        // Flight action still tracked separately for descriptive event messages
         let mut prev_flight_action_msg = std::option::Option::<&str>::None;
-        let mut prev_non_gps_cause_msg = std::option::Option::<&str>::None;
+
+        /// Macro: check a boolean field for change and emit a message
+        macro_rules! track_bool {
+            ($cur:expr, $prev:ident, $name:expr, $severity:expr, $ts:expr, $msgs:ident) => {
+                let cur_val = $cur;
+                if let Some(prev_val) = $prev {
+                    if cur_val != prev_val {
+                        $msgs.push(FlightMessage {
+                            timestamp_ms: $ts,
+                            message_type: $severity.to_string(),
+                            message: format!("{} changed from {} to {}", $name, fmt_bool(prev_val), fmt_bool(cur_val)),
+                        });
+                    }
+                }
+                $prev = Some(cur_val);
+            };
+        }
+
+        /// Macro: check a string-formatted enum/numeric field for change
+        macro_rules! track_string {
+            ($cur:expr, $prev:ident, $name:expr, $severity:expr, $ts:expr, $msgs:ident) => {
+                let cur_str: String = $cur;
+                if let Some(ref prev_str) = $prev {
+                    if cur_str != *prev_str {
+                        $msgs.push(FlightMessage {
+                            timestamp_ms: $ts,
+                            message_type: $severity.to_string(),
+                            message: format!("{} changed from {} to {}", $name, prev_str, cur_str),
+                        });
+                    }
+                }
+                $prev = Some(cur_str);
+            };
+        }
 
         for frame in frames {
             let current_timestamp_ms = if frame.osd.fly_time > 0.0 {
@@ -1059,104 +1140,71 @@ impl<'a> LogParser<'a> {
                 });
             }
 
-            // OSD state tracking for missing warnings
-            
-            // 1. Voltage Warning (0=Normal, 1=Low, 2=Severe Low, etc.)
-            let current_voltage_warning = frame.osd.voltage_warning;
-            if current_voltage_warning != 0 && current_voltage_warning != prev_voltage_warning {
-                let msg = match current_voltage_warning {
-                    1 => "Low Battery Warning",
-                    2 => "Severe Low Battery Warning",
-                    3 => "Smart Low Battery Warning",
-                    _ => "Battery Voltage Warning",
-                };
-                messages.push(FlightMessage {
-                    timestamp_ms: current_timestamp_ms,
-                    message_type: "warn".to_string(),
-                    message: msg.to_string(),
-                });
-            }
-            prev_voltage_warning = current_voltage_warning;
+            // ============================================================
+            //  Caution-level state changes (hardware / sensor errors)
+            // ============================================================
+            track_bool!(frame.osd.is_compass_error, prev_is_compass_error,
+                "Compass Error", "caution", current_timestamp_ms, messages);
+            track_bool!(frame.osd.is_motor_blocked, prev_is_motor_blocked,
+                "Motor Blocked", "caution", current_timestamp_ms, messages);
+            track_bool!(frame.osd.is_barometer_dead_in_air, prev_is_barometer_dead_in_air,
+                "Barometer Dead In Air", "caution", current_timestamp_ms, messages);
+            track_bool!(frame.osd.is_acceletor_over_range, prev_is_acceletor_over_range,
+                "Accelerometer Over Range", "caution", current_timestamp_ms, messages);
+            track_bool!(frame.osd.is_not_enough_force, prev_is_not_enough_force,
+                "Not Enough Force", "caution", current_timestamp_ms, messages);
+            track_bool!(frame.osd.is_propeller_catapult, prev_is_propeller_catapult,
+                "Propeller Catapult", "caution", current_timestamp_ms, messages);
+            track_string!(fmt_opt_enum(&frame.osd.motor_start_failed_cause), prev_motor_start_failed_cause,
+                "Motor Start Failed Cause", "caution", current_timestamp_ms, messages);
+            track_string!(fmt_opt_enum(&frame.osd.imu_init_fail_reason), prev_imu_init_fail_reason,
+                "IMU Init Fail Reason", "caution", current_timestamp_ms, messages);
+            track_bool!(frame.gimbal.is_stuck, prev_gimbal_is_stuck,
+                "Gimbal Stuck", "caution", current_timestamp_ms, messages);
 
-            // 2. Compass Error
-            let current_compass_error = frame.osd.is_compass_error;
-            if current_compass_error && !prev_compass_error {
-                messages.push(FlightMessage {
-                    timestamp_ms: current_timestamp_ms,
-                    message_type: "warn".to_string(),
-                    message: "Compass Error".to_string(),
-                });
+            // ============================================================
+            //  Warning-level state changes (operational)
+            // ============================================================
+            {
+                let cur_vw = frame.osd.voltage_warning;
+                if let Some(prev_vw) = prev_voltage_warning {
+                    if cur_vw != prev_vw {
+                        messages.push(FlightMessage {
+                            timestamp_ms: current_timestamp_ms,
+                            message_type: "warn".to_string(),
+                            message: format!("Voltage Warning changed from {} to {}",
+                                fmt_voltage_warning(prev_vw), fmt_voltage_warning(cur_vw)),
+                        });
+                    }
+                }
+                prev_voltage_warning = Some(cur_vw);
             }
-            prev_compass_error = current_compass_error;
+            track_bool!(frame.osd.wave_error, prev_wave_error,
+                "Wave Error", "warn", current_timestamp_ms, messages);
+            track_bool!(frame.osd.is_out_of_limit, prev_is_out_of_limit,
+                "Out Of Limit", "warn", current_timestamp_ms, messages);
+            track_string!(fmt_opt_enum(&frame.osd.go_home_status), prev_go_home_status,
+                "Go Home Status", "warn", current_timestamp_ms, messages);
+            track_bool!(frame.osd.is_vibrating, prev_is_vibrating,
+                "Vibrating", "warn", current_timestamp_ms, messages);
+            track_bool!(frame.osd.is_go_home_height_modified, prev_is_go_home_height_modified,
+                "Go Home Height Modified", "warn", current_timestamp_ms, messages);
+            track_string!(fmt_opt_enum(&frame.osd.non_gps_cause), prev_non_gps_cause,
+                "Non-GPS Cause", "warn", current_timestamp_ms, messages);
 
-            // 3. Motor Blocked
-            let current_motor_blocked = frame.osd.is_motor_blocked;
-            if current_motor_blocked && !prev_motor_blocked {
-                messages.push(FlightMessage {
-                    timestamp_ms: current_timestamp_ms,
-                    message_type: "warn".to_string(),
-                    message: "Motor Blocked or Overloaded".to_string(),
-                });
-            }
-            prev_motor_blocked = current_motor_blocked;
+            // ============================================================
+            //  Info-level state changes (informational)
+            // ============================================================
+            track_bool!(frame.osd.is_vision_used, prev_is_vision_used,
+                "Vision Positioning", "tip", current_timestamp_ms, messages);
+            track_bool!(frame.osd.is_imu_preheated, prev_is_imu_preheated,
+                "IMU Preheated", "tip", current_timestamp_ms, messages);
+            track_bool!(frame.osd.can_ioc_work, prev_can_ioc_work,
+                "IOC Available", "tip", current_timestamp_ms, messages);
 
-            // 4. Wave Error (Vision System Error)
-            let current_wave_error = frame.osd.wave_error;
-            if current_wave_error && !prev_wave_error {
-                messages.push(FlightMessage {
-                    timestamp_ms: current_timestamp_ms,
-                    message_type: "warn".to_string(),
-                    message: "Vision System Error".to_string(),
-                });
-            }
-            prev_wave_error = current_wave_error;
-
-            // 5. Barometer Dead in Air
-            let current_barometer_dead = frame.osd.is_barometer_dead_in_air;
-            if current_barometer_dead && !prev_barometer_dead {
-                messages.push(FlightMessage {
-                    timestamp_ms: current_timestamp_ms,
-                    message_type: "warn".to_string(),
-                    message: "Barometer Error".to_string(),
-                });
-            }
-            prev_barometer_dead = current_barometer_dead;
-
-            // 6. Accelerometer Over Range
-            let current_accel_over = frame.osd.is_acceletor_over_range;
-            if current_accel_over && !prev_accel_over {
-                messages.push(FlightMessage {
-                    timestamp_ms: current_timestamp_ms,
-                    message_type: "warn".to_string(),
-                    message: "Accelerometer Over Range".to_string(),
-                });
-            }
-            prev_accel_over = current_accel_over;
-
-            // 7. Not Enough Force (e.g. low battery / payload too heavy)
-            let current_not_enough_force = frame.osd.is_not_enough_force;
-            if current_not_enough_force && !prev_not_enough_force {
-                messages.push(FlightMessage {
-                    timestamp_ms: current_timestamp_ms,
-                    message_type: "warn".to_string(),
-                    message: "Not Enough Force (Propulsion/Power Issue)".to_string(),
-                });
-            }
-            prev_not_enough_force = current_not_enough_force;
-
-            // 8. Flight Limit Reached
-            let current_out_of_limit = frame.osd.is_out_of_limit;
-            if current_out_of_limit && !prev_out_of_limit {
-                messages.push(FlightMessage {
-                    timestamp_ms: current_timestamp_ms,
-                    message_type: "warn".to_string(),
-                    message: "Flight Limit Reached".to_string(),
-                });
-            }
-            prev_out_of_limit = current_out_of_limit;
-
-            // 9. Flight Action transitions (critical ones)
-            // e.g., AutoLanding due to battery, WarningPowerGoHome, MotorblockLanding, etc.
+            // ============================================================
+            //  Flight Action transitions (descriptive event messages)
+            // ============================================================
             let current_flight_action_msg = frame.osd.flight_action.and_then(|action| {
                 use dji_log_parser::record::osd::FlightAction;
                 match action {
@@ -1186,32 +1234,6 @@ impl<'a> LogParser<'a> {
                 }
             }
             prev_flight_action_msg = current_flight_action_msg;
-
-            // 10. Non GPS Cause (if GPS is lost, tell the user why)
-            let current_non_gps_cause_msg = frame.osd.non_gps_cause.and_then(|cause| {
-                use dji_log_parser::record::osd::NonGPSCause;
-                match cause {
-                    NonGPSCause::Forbid => Some("GPS Forbidden"),
-                    NonGPSCause::GpsNumNonEnough => Some("Weak GPS Signal"),
-                    NonGPSCause::GpsHdopLarge => Some("GPS Accuracy Low"),
-                    NonGPSCause::GpsPositionNonMatch => Some("GPS Position Mismatch"),
-                    NonGPSCause::SpeedErrorLarge => Some("Speed Error Large (GPS lost)"),
-                    NonGPSCause::YawErrorLarge => Some("Yaw Error Large (GPS lost)"),
-                    NonGPSCause::CompassErrorLarge => Some("Compass Error Large (GPS lost)"),
-                    _ => std::option::Option::None,
-                }
-            });
-            
-            if current_non_gps_cause_msg != prev_non_gps_cause_msg {
-                if let Some(msg) = current_non_gps_cause_msg {
-                    messages.push(FlightMessage {
-                        timestamp_ms: current_timestamp_ms,
-                        message_type: "warn".to_string(),
-                        message: msg.to_string(),
-                    });
-                }
-            }
-            prev_non_gps_cause_msg = current_non_gps_cause_msg;
 
             timestamp_ms = current_timestamp_ms + fallback_interval_ms;
         }
