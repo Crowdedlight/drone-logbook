@@ -4,7 +4,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import Map, { NavigationControl, Marker, useControl } from 'react-map-gl/maplibre';
+import Map, { NavigationControl, Marker, Source, Layer, useControl } from 'react-map-gl/maplibre';
 import type { MapRef } from 'react-map-gl/maplibre';
 import type { StyleSpecification } from 'maplibre-gl';
 import { PathLayer, ScatterplotLayer, TextLayer, IconLayer } from '@deck.gl/layers';
@@ -122,6 +122,50 @@ function smoothTrack(
 
   // Always include the final point
   result.push(points[n - 1]);
+  return result;
+}
+
+/**
+ * Simple moving-average smoother for mobile.
+ * Averages a window of `radius*2+1` points — no overshoot, just noise reduction.
+ */
+function movingAverageSmooth(
+  points: [number, number, number][],
+  radius = 3
+): [number, number, number][] {
+  if (points.length < 3) return points;
+  const n = points.length;
+  const result: [number, number, number][] = [];
+  for (let i = 0; i < n; i++) {
+    let sumLng = 0, sumLat = 0, sumAlt = 0, count = 0;
+    const lo = Math.max(0, i - radius);
+    const hi = Math.min(n - 1, i + radius);
+    for (let j = lo; j <= hi; j++) {
+      sumLng += points[j][0];
+      sumLat += points[j][1];
+      sumAlt += points[j][2];
+      count++;
+    }
+    result.push([sumLng / count, sumLat / count, sumAlt / count]);
+  }
+  return result;
+}
+
+/**
+ * Downsample a path to at most `maxPts` points using uniform stride.
+ * Always keeps the first and last point.
+ */
+function downsample(
+  points: [number, number, number][],
+  maxPts: number
+): [number, number, number][] {
+  if (points.length <= maxPts) return points;
+  const result: [number, number, number][] = [points[0]];
+  const stride = (points.length - 1) / (maxPts - 1);
+  for (let i = 1; i < maxPts - 1; i++) {
+    result.push(points[Math.round(i * stride)]);
+  }
+  result.push(points[points.length - 1]);
   return result;
 }
 
@@ -665,19 +709,49 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
     }
   }, [track, homeLat, homeLon]);
 
-  // Smooth the raw GPS track using Catmull-Rom spline interpolation
+  // Smooth the raw GPS track
   const smoothedTrack = useMemo(() => {
     if (track.length < 3) return track;
-    // Resolution 4 = insert 4 points between each GPS sample → much smoother curves
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    if (isMobile) {
+      // Two passes of moving-average: first pass reduces GPS jitter,
+      // second pass rounds out sharp U-turns that cause joint artifacts.
+      const pass1 = movingAverageSmooth(track, 5);
+      return movingAverageSmooth(pass1, 4);
+    }
+    // Desktop: Catmull-Rom spline for buttery-smooth curves
     return smoothTrack(track, 4);
   }, [track]);
 
   const deckPathData = useMemo(() => {
     if (smoothedTrack.length < 2) return [];
 
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const toAlt = (altitude: number) => (is3D ? altitude : 0);
     const n = smoothedTrack.length;
     const rawN = track.length;
+
+    // ── Mobile: single multi-point path with solid color ──────────
+    // This reduces GPU draw calls from thousands to 1, which is
+    // critical for mobile WebGL where per-segment PathLayer data
+    // (each with capRounded + jointRounded + billboard tessellation)
+    // exceeds vertex buffer / shader limits.
+    if (isMobile) {
+      // When 3D terrain is on, use deck.gl PathLayer for altitude.
+      // When 2D, the MapLibre native line layer handles rendering.
+      if (!is3D) return [];
+      const full: [number, number, number][] = smoothedTrack.map(([lng, lat, alt]) => [
+        lng, lat, alt,
+      ]);
+      const path = downsample(full, 500);
+      return [{
+        path,
+        color: [250, 204, 21] as [number, number, number],
+        meta: { height: 0, speed: 0, distance: 0, progress: 0, lat: 0, lng: 0, battery: null },
+      }];
+    }
+
+    // ── Desktop: per-segment gradient coloring ────────────────────
     const telemetryN = telemetry?.isVideo?.length ?? 0;
 
     // Pre-compute per-point values depending on colorBy mode
@@ -804,9 +878,52 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
     return segments;
   }, [is3D, smoothedTrack, track, colorBy, homeLat, homeLon, telemetry]);
 
+  // ── Mobile: GeoJSON for MapLibre native line layer (2D only) ────
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const mobilePathGeoJSON = useMemo(() => {
+    if (!isMobile || is3D || smoothedTrack.length < 2) return null;
+    const coords = downsample(smoothedTrack, 800).map(([lng, lat]) => [lng, lat]);
+    return {
+      type: 'Feature' as const,
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: coords,
+      },
+      properties: {},
+    };
+  }, [isMobile, is3D, smoothedTrack]);
+
   const deckLayers = useMemo(() => {
     if (deckPathData.length === 0) return [];
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const shadowWidth = lineThickness + 3;
+
+    if (isMobile) {
+      // 3D mode on mobile: deck.gl PathLayer for altitude with minimal settings.
+      // 2D mode uses MapLibre native line instead (returns [] above).
+      if (deckPathData.length === 0) return [];
+      return [
+        new PathLayer({
+          id: 'flight-path-mobile-3d',
+          data: deckPathData,
+          getPath: (d) => d.path,
+          getColor: [250, 204, 21, 255],
+          getWidth: lineThickness + 1,
+          widthUnits: 'pixels',
+          widthMinPixels: Math.max(4, lineThickness + 1),
+          widthMaxPixels: 12,
+          capRounded: false,
+          jointRounded: false,
+          miterLimit: 1,
+          billboard: false,
+          opacity: 1,
+          pickable: false,
+          parameters: { depthTest: false },
+        }),
+      ];
+    }
+
+    // Desktop: shadow + gradient path
     return [
       // Shadow / outline layer
       new PathLayer({
@@ -1369,8 +1486,8 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
                 onChange={setShowMessages}
               />
 
-              {/* Color-by dropdown */}
-              <div className="pt-1 border-t border-gray-600/50">
+              {/* Color-by dropdown — hidden on mobile (solid yellow path) */}
+              <div className="pt-1 border-t border-gray-600/50 hidden md:block">
                 <label className="block text-[10px] text-gray-400 mb-1 uppercase tracking-wide">{t('map.colorBy')}</label>
                 <Select
                   value={colorBy}
@@ -1395,6 +1512,21 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
                     { value: '5', label: t('map.extraThick') },
                   ]}
                 />
+              </div>
+
+              {/* Reset View — mobile only (desktop has floating button) */}
+              <div className="pt-1 border-t border-gray-600/50 md:hidden">
+                <button
+                  type="button"
+                  onClick={resetView}
+                  className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-drone-dark/80 hover:bg-drone-dark border border-gray-700 hover:border-gray-500 rounded-lg text-xs text-gray-300 hover:text-white transition-colors"
+                  title={t('map.resetView')}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                  </svg>
+                  <span>{t('map.reset')}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1438,8 +1570,8 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
           </Marker>
         )}
 
-        {/* Reset View Button — bottom right */}
-        <div className="absolute bottom-3 right-3 z-10">
+        {/* Reset View Button — bottom right, hidden on mobile (moved to map settings) */}
+        <div className="absolute bottom-3 right-3 z-10 hidden md:block">
           <button
             type="button"
             onClick={resetView}
@@ -1453,6 +1585,25 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
           </button>
         </div>
 
+
+        {/* Mobile 2D: MapLibre native line layer — uniform width, reliable on all GPUs */}
+        {isMobile && !is3D && mobilePathGeoJSON && (
+          <Source id="mobile-flight-path" type="geojson" data={mobilePathGeoJSON}>
+            <Layer
+              id="mobile-flight-path-line"
+              type="line"
+              paint={{
+                'line-color': '#facc15',
+                'line-width': lineThickness + 1,
+                'line-opacity': 1,
+              }}
+              layout={{
+                'line-join': 'round',
+                'line-cap': 'round',
+              }}
+            />
+          </Source>
+        )}
 
         <DeckGLOverlay
           layers={[...deckLayers, ...mediaLayers, ...replayDeckLayers]}
@@ -1697,7 +1848,7 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
               {formatReplayTime(1)}
             </span>
 
-            {/* Speed – click to cycle */}
+            {/* Speed – click to cycle (hidden on mobile) */}
             <button
               type="button"
               onClick={() => {
@@ -1705,7 +1856,7 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
                 const idx = speeds.indexOf(replaySpeed);
                 setReplaySpeed(speeds[(idx + 1) % speeds.length]);
               }}
-              className="flex-shrink-0 text-[9px] text-gray-300 border border-gray-600 rounded px-1.5 py-px cursor-pointer text-center min-w-[32px] hover:border-gray-400 transition-colors themed-select-trigger"
+              className="hidden md:inline-flex flex-shrink-0 text-[9px] text-gray-300 border border-gray-600 rounded px-1.5 py-px cursor-pointer text-center min-w-[32px] hover:border-gray-400 transition-colors themed-select-trigger"
               title={t('map.clickToCycleSpeed')}
             >
               {replaySpeed === 0.5 ? '½×' : `${replaySpeed}×`}

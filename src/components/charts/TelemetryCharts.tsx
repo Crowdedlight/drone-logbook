@@ -649,7 +649,8 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
     return resolvedTheme;
   }, [resolvedTheme]);
 
-  const [dragZoomActive, setDragZoomActive] = useState(true);
+  const isMobileCharts = typeof window !== 'undefined' && window.innerWidth < 768;
+  const [dragZoomActive, setDragZoomActive] = useState(!isMobileCharts);
 
   const toggleDragZoom = useCallback(() => {
     setDragZoomActive((prev) => {
@@ -714,17 +715,20 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
         syncZoom(chart);
       });
 
-      // Activate drag-to-zoom by default after the toolbox feature is fully initialized.
+      // Activate drag-to-zoom by default on desktop only.
       // A deferred dispatch is required because onChartReady fires synchronously
       // after setOption, before the toolbox dataZoom feature is ready to handle
       // the takeGlobalCursor action.
-      requestAnimationFrame(() => {
-        chart.dispatchAction({
-          type: 'takeGlobalCursor',
-          key: 'dataZoomSelect',
-          dataZoomSelectActive: true,
+      // On mobile, drag-to-zoom interferes with normal touch scrolling.
+      if (!isMobileCharts) {
+        requestAnimationFrame(() => {
+          chart.dispatchAction({
+            type: 'takeGlobalCursor',
+            key: 'dataZoomSelect',
+            dataZoomSelectActive: true,
+          });
         });
-      });
+      }
     },
     [syncZoom]
   );

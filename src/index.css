@@ -316,6 +316,12 @@ body.modal-open .overflow-y-auto {
   overflow: hidden !important;
 }
 
+/* Allow scrolling inside the settings modal content */
+body.modal-open .settings-scroll {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
 body.overlay-active {
   overflow: hidden !important;
 }
