@@ -237,21 +237,21 @@ export function Overview({ stats, flights, unitSystem, onSelectFlight }: Overvie
       : 0;
 
   return (
-    <div className="min-w-[1100px] px-4 pt-4 pb-24 space-y-5">
+    <div className="w-full min-w-0 md:min-w-[700px] lg:min-w-[1100px] px-4 pt-4 pb-24 space-y-5">
       {/* Pilot Milestone Timeline */}
       <PilotMilestoneTimeline totalHours={filteredStats.totalDurationSecs / 3600} />
 
       {/* Primary Stats */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         <StatCard label={t('overview.totalFlights')} value={filteredStats.totalFlights.toLocaleString(locale)} icon={<FlightIcon />} />
         <StatCard label={t('overview.totalDistance')} value={formatDistance(filteredStats.totalDistanceM, unitSystem, locale)} icon={<DistanceIcon />} />
         <StatCard label={t('overview.totalTime')} value={formatDuration(filteredStats.totalDurationSecs)} icon={<ClockIcon />} />
         <StatCard label={t('overview.totalPhotos')} value={filteredStats.totalPhotos.toLocaleString(locale)} icon={<CameraIcon />} />
-        <StatCard label={t('overview.totalVideos')} value={filteredStats.totalVideos.toLocaleString(locale)} icon={<VideoIcon />} />
+        <StatCard className="col-span-2 sm:col-span-1 md:col-span-1" label={t('overview.totalVideos')} value={filteredStats.totalVideos.toLocaleString(locale)} icon={<VideoIcon />} />
       </div>
 
       {/* Secondary Stats */}
-      <div className="grid grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
         <StatCard label={t('overview.maxAltitude')} value={formatAltitude(filteredStats.maxAltitudeM, unitSystem, locale)} icon={<AltitudeIcon />} small />
         <StatCard label={t('overview.maxSpeedAchieved')} value={formatSpeed(filteredStats.maxSpeedMs, unitSystem, locale)} icon={<LightningIcon />} small />
         <StatCard
@@ -266,7 +266,7 @@ export function Overview({ stats, flights, unitSystem, onSelectFlight }: Overvie
       </div>
 
       {/* Activity Heatmap + Drone Flight Time Row */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: '60% minmax(0, 1fr)', minHeight: '240px' }}>
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-[60%_minmax(0,1fr)] min-h-[240px]">
         {/* Activity Heatmap */}
         <ActivityHeatmapCard
           flightsByDate={filteredStats.flightsByDate}
@@ -286,7 +286,7 @@ export function Overview({ stats, flights, unitSystem, onSelectFlight }: Overvie
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Drone Model Chart */}
         <div className="card p-4">
           <h3 className="text-sm font-semibold text-white mb-3">{t('overview.flightsByDrone')}</h3>
@@ -347,7 +347,7 @@ export function Overview({ stats, flights, unitSystem, onSelectFlight }: Overvie
       </div>
 
       {/* Battery Health & Top Flights Row */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Battery Health Indicators */}
         <div className="card p-4">
           <h3 className="text-sm font-semibold text-white mb-3">{t('overview.batteryHealth')}</h3>
@@ -459,14 +459,16 @@ function StatCard({
   value,
   icon,
   small,
+  className = '',
 }: {
   label: string;
   value: string;
   icon?: React.ReactNode;
   small?: boolean;
+  className?: string;
 }) {
   return (
-    <div className={`stat-card ${small ? 'py-3' : ''}`}>
+    <div className={`stat-card ${small ? 'py-3' : ''} ${className}`}>
       {icon && <div className="text-drone-primary mb-1">{icon}</div>}
       <span className={small ? 'text-lg font-bold text-white' : 'stat-value'}>{value}</span>
       <span className={small ? 'text-xs text-gray-400' : 'stat-label'}>{label}</span>
@@ -637,7 +639,7 @@ function PilotMilestoneTimeline({ totalHours }: { totalHours: number }) {
         </div>
 
         {/* Next milestone info */}
-        <div className="flex-shrink-0 text-right">
+        <div className="flex-shrink-0 text-right hidden sm:block">
           {nextMilestone ? (
             <div className="text-xs">
               <span className="text-white font-medium">{t('overview.nextRank', { label: t(`overview.${nextMilestone.label.toLowerCase()}`), time: formatHours(nextMilestone.hours - totalHours) })}</span>
@@ -1280,9 +1282,9 @@ function DonutChart({
       left: legendLeft,
       top: 'center',
       width: legendWidth,
-      textStyle: { 
-        color: '#9ca3af', 
-        fontSize: 11, 
+      textStyle: {
+        color: '#9ca3af',
+        fontSize: 11,
         overflow: 'truncate' as const,
         width: legendWidth - 24, // Account for icon and padding
       },
@@ -1602,12 +1604,11 @@ function BatteryHealthList({
                 </div>
               ) : (
                 <div
-                  className="grid items-center gap-1.5 text-xs"
-                  style={{ gridTemplateColumns: '160px 1fr 32px 150px' }}
+                  className="flex items-center gap-1 md:gap-1.5 text-[10px] md:text-xs w-full overflow-hidden"
                   title={!hideSerialNumbers ? (displayName !== battery.batterySerial ? `${displayName} (${battery.batterySerial})` : battery.batterySerial) : undefined}
                 >
                   <span
-                    className="text-gray-300 font-medium truncate flex items-center justify-end gap-1 group cursor-pointer"
+                    className="w-[85px] md:w-[160px] flex-shrink-0 text-gray-300 font-medium truncate flex items-center justify-start md:justify-end gap-1 group cursor-pointer"
                     onDoubleClick={() => handleStartRename(battery.batterySerial)}
                   >
                     <span className="truncate">{displayName}</span>
@@ -1621,7 +1622,7 @@ function BatteryHealthList({
                       </svg>
                     </button>
                   </span>
-                  <div className="relative h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                  <div className="flex-1 min-w-[30px] relative h-2 bg-gray-700/50 rounded-full overflow-hidden mx-1">
                     <div
                       className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
                       style={{
@@ -1630,10 +1631,10 @@ function BatteryHealthList({
                       }}
                     />
                   </div>
-                  <span className="text-[10px] text-gray-500 text-right" style={{ fontVariantNumeric: 'tabular-nums', minWidth: '32px' }}>
+                  <span className="w-[28px] md:w-[32px] flex-shrink-0 text-[10px] text-gray-500 text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {healthPercent.toFixed(0)}%
                   </span>
-                  <span className="text-gray-400 text-[10px] text-left truncate">
+                  <span className="hidden md:inline-block w-[90px] md:w-[150px] flex-shrink-0 text-gray-400 text-[9px] md:text-[10px] text-right md:text-left truncate">
                     {t('overview.flightsAndDuration', { n: battery.flightCount, duration: formatDuration(battery.totalDurationSecs) })}
                   </span>
                 </div>
@@ -1944,7 +1945,7 @@ function MaintenanceSection({
         <h3 className={`text-base font-semibold ${textPrimary}`}>{t('overview.maintenance')}</h3>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Battery Maintenance */}
         <div className={`p-4 rounded-lg border ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-gray-800/30 border-gray-700/50'}`}>
           <div className="flex items-center gap-2 mb-4">

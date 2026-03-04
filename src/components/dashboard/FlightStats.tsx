@@ -161,7 +161,7 @@ export function FlightStats({ data }: FlightStatsProps) {
   return (
     <div className="bg-drone-secondary border-b border-gray-700 px-4 py-3">
       {/* Flight Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-3 gap-2">
         <div>
           <h2 className="text-lg font-semibold text-white">
             {flight.displayName || flight.fileName}
@@ -273,7 +273,7 @@ export function FlightStats({ data }: FlightStatsProps) {
           </div>
         </div>
 
-        <div className="text-right">
+        <div className="text-left md:text-right self-start md:self-auto">
           <p className="text-xs text-gray-500">
             {flight.pointCount?.toLocaleString(locale) || 0} {t('flightStats.dataPoints')}
           </p>
@@ -281,58 +281,74 @@ export function FlightStats({ data }: FlightStatsProps) {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_0.8fr_0.8fr_auto_auto] gap-2">
-        <StatCard
-          label={t('flightStats.duration')}
-          value={formatDuration(flight.durationSecs)}
-          icon={<ClockIcon />}
-        />
-        <StatCard
-          label={t('flightStats.distance')}
-          value={formatDistance(flight.totalDistance, unitSystem, locale)}
-          icon={<DistanceIcon />}
-        />
-        <StatCard
-          label={t('flightStats.maxHeight')}
-          value={formatAltitude(flight.maxAltitude, unitSystem, locale)}
-          icon={<AltitudeIcon />}
-        />
-        <StatCard
-          label={t('flightStats.maxSpeed')}
-          value={formatSpeed(flight.maxSpeed, unitSystem, locale)}
-          icon={<SpeedIcon />}
-        />
-        <StatCard
-          label={t('flightStats.minBattery')}
-          value={minBattery !== null ? `${minBattery}%` : '--'}
-          icon={<BatteryIcon percent={minBattery} />}
-          alert={minBattery !== null && minBattery < 20}
-        />
-        <StatCard
-          label={t('flightStats.photos')}
-          value={(flight.photoCount ?? 0).toLocaleString(locale)}
-          icon={<CameraIcon />}
-        />
-        <StatCard
-          label={t('flightStats.videos')}
-          value={(flight.videoCount ?? 0).toLocaleString(locale)}
-          icon={<VideoIcon />}
-        />
+      <div className="flex flex-wrap md:grid md:grid-cols-[repeat(5,minmax(0,1fr))_0.8fr_0.8fr_auto_auto] gap-2">
+        <div className="flex-1 min-w-[120px] md:min-w-0">
+          <StatCard
+            label={t('flightStats.duration')}
+            value={formatDuration(flight.durationSecs)}
+            icon={<ClockIcon />}
+          />
+        </div>
+        <div className="flex-1 min-w-[120px] md:min-w-0">
+          <StatCard
+            label={t('flightStats.distance')}
+            value={formatDistance(flight.totalDistance, unitSystem, locale)}
+            icon={<DistanceIcon />}
+          />
+        </div>
+        <div className="flex-1 min-w-[120px] md:min-w-0">
+          <StatCard
+            label={t('flightStats.maxHeight')}
+            value={formatAltitude(flight.maxAltitude, unitSystem, locale)}
+            icon={<AltitudeIcon />}
+          />
+        </div>
+        <div className="flex-1 min-w-[120px] md:min-w-0">
+          <StatCard
+            label={t('flightStats.maxSpeed')}
+            value={formatSpeed(flight.maxSpeed, unitSystem, locale)}
+            icon={<SpeedIcon />}
+          />
+        </div>
+        <div className="flex-1 min-w-[120px] md:min-w-0">
+          <StatCard
+            label={t('flightStats.minBattery')}
+            value={minBattery !== null ? `${minBattery}%` : '--'}
+            icon={<BatteryIcon percent={minBattery} />}
+            alert={minBattery !== null && minBattery < 20}
+          />
+        </div>
+        <div className="flex-1 min-w-[100px] md:min-w-0">
+          <StatCard
+            label={t('flightStats.photos')}
+            value={(flight.photoCount ?? 0).toLocaleString(locale)}
+            icon={<CameraIcon />}
+          />
+        </div>
+        <div className="flex-1 min-w-[100px] md:min-w-0">
+          <StatCard
+            label={t('flightStats.videos')}
+            value={(flight.videoCount ?? 0).toLocaleString(locale)}
+            icon={<VideoIcon />}
+          />
+        </div>
         {/* Weather button */}
-        <button
-          type="button"
-          onClick={() => setIsWeatherOpen(true)}
-          disabled={!flight.homeLat || !flight.homeLon || !flight.startTime}
-          title={t('flightStats.flightWeather')}
-          className="h-full min-h-[52px] w-[62px] flex items-center justify-center rounded-lg border-2 border-sky-500/70 text-sky-400 transition-all duration-200 hover:bg-sky-500 hover:text-white hover:shadow-md disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-400"
-        >
-          <WeatherBtnIcon />
-        </button>
-        <div className="relative justify-self-end">
+        <div className="flex justify-center md:block">
+          <button
+            type="button"
+            onClick={() => setIsWeatherOpen(true)}
+            disabled={!flight.homeLat || !flight.homeLon || !flight.startTime}
+            title={t('flightStats.flightWeather')}
+            className="h-full min-h-[52px] w-[62px] flex items-center justify-center rounded-lg border-2 border-sky-500/70 text-sky-400 transition-all duration-200 hover:bg-sky-500 hover:text-white hover:shadow-md disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-sky-400"
+          >
+            <WeatherBtnIcon />
+          </button>
+        </div>
+        <div className="relative flex-1 md:flex-none justify-self-stretch md:justify-self-end">
           <button
             type="button"
             onClick={() => setIsExportOpen((open) => !open)}
-            className="w-[126px] h-full min-h-[52px] flex items-center justify-center gap-2 rounded-lg border-2 border-drone-accent/70 text-drone-accent text-sm font-semibold px-2 transition-all duration-200 hover:bg-drone-accent hover:text-white hover:shadow-md"
+            className="w-full md:w-[126px] h-full min-h-[52px] flex items-center justify-center gap-2 rounded-lg border-2 border-drone-accent/70 text-drone-accent text-sm font-semibold px-2 transition-all duration-200 hover:bg-drone-accent hover:text-white hover:shadow-md"
           >
             <ExportIcon />
             {isExporting ? t('flightStats.exporting') : t('flightStats.export')}

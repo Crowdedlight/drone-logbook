@@ -45,32 +45,32 @@ const TELEMETRY_FIELDS: TelemetryFieldDef[] = [
   { id: 'height', label: 'telemetry.height', color: '#00A0DC', dataKey: 'height', unit: 'm', unitImperial: 'ft', metricFactor: 1, imperialFactor: 3.28084, group: 'altitude' },
   { id: 'vpsHeight', label: 'telemetry.vpsHeight', color: '#f97316', dataKey: 'vpsHeight', unit: 'm', unitImperial: 'ft', metricFactor: 1, imperialFactor: 3.28084, group: 'altitude' },
   { id: 'altitude', label: 'telemetry.altitudeGps', color: '#22d3ee', dataKey: 'altitude', unit: 'm', unitImperial: 'ft', metricFactor: 1, imperialFactor: 3.28084, group: 'altitude' },
-  
+
   // Speed group
   { id: 'speed', label: 'telemetry.speed', color: '#00D4AA', dataKey: 'speed', unit: 'km/h', unitImperial: 'mph', metricFactor: 3.6, imperialFactor: 2.236936, group: 'speed' },
   { id: 'velocityX', label: 'telemetry.xSpeed', color: '#ef4444', dataKey: 'velocityX', unit: 'km/h', unitImperial: 'mph', metricFactor: 3.6, imperialFactor: 2.236936, group: 'velocity' },
   { id: 'velocityY', label: 'telemetry.ySpeed', color: '#a855f7', dataKey: 'velocityY', unit: 'km/h', unitImperial: 'mph', metricFactor: 3.6, imperialFactor: 2.236936, group: 'velocity' },
   { id: 'velocityZ', label: 'telemetry.zSpeed', color: '#7c3aed', dataKey: 'velocityZ', unit: 'km/h', unitImperial: 'mph', metricFactor: 3.6, imperialFactor: 2.236936, group: 'velocity' },
-  
+
   // Battery group
   { id: 'battery', label: 'telemetry.batteryPercent', color: '#f59e0b', dataKey: 'battery', unit: '%', group: 'battery' },
   { id: 'batteryVoltage', label: 'telemetry.voltage', color: '#3b82f6', dataKey: 'batteryVoltage', unit: 'V', group: 'battery' },
   { id: 'batteryTemp', label: 'telemetry.temperature', color: '#e11d48', dataKey: 'batteryTemp', unit: '°C', group: 'battery' },
-  
+
   // Attitude group
   { id: 'pitch', label: 'telemetry.pitch', color: '#8b5cf6', dataKey: 'pitch', unit: '°', group: 'attitude' },
   { id: 'roll', label: 'telemetry.roll', color: '#ec4899', dataKey: 'roll', unit: '°', group: 'attitude' },
   { id: 'yaw', label: 'telemetry.yaw', color: '#14b8a6', dataKey: 'yaw', unit: '°', group: 'attitude' },
-  
+
   // RC group
   { id: 'rcSignal', label: 'telemetry.rcSignal', color: '#22c55e', dataKey: 'rcSignal', unit: '%', group: 'rc' },
   { id: 'rcUplink', label: 'telemetry.rcUplink', color: '#84cc16', dataKey: 'rcUplink', unit: '%', group: 'rc' },
   { id: 'rcDownlink', label: 'telemetry.rcDownlink', color: '#0369a1', dataKey: 'rcDownlink', unit: '%', group: 'rc' },
-  
+
   // GPS group
   { id: 'satellites', label: 'telemetry.gpsSatellites', color: '#0ea5e9', dataKey: 'satellites', unit: '', group: 'gps' },
   { id: 'distanceToHome', label: 'telemetry.distToHome', color: '#10b981', dataKey: 'distanceToHome', unit: 'm', unitImperial: 'ft', metricFactor: 1, imperialFactor: 3.28084, group: 'gps' },
-  
+
   // Cell Voltages (virtual field that expands to all available cells)
   { id: 'allCellVoltages', label: 'telemetry.cellVoltages', color: '#fbbf24', dataKey: 'cellVoltages', unit: 'V', group: 'battery' },
 ];
@@ -113,11 +113,11 @@ function getFieldData(
   if (!rawData || !Array.isArray(rawData)) return [];
 
   // Apply unit conversion
-  const factor = unitSystem === 'imperial' 
-    ? (field.imperialFactor ?? 1) 
+  const factor = unitSystem === 'imperial'
+    ? (field.imperialFactor ?? 1)
     : (field.metricFactor ?? 1);
 
-  return (rawData as (number | null)[]).map(v => 
+  return (rawData as (number | null)[]).map(v =>
     v === null || v === undefined ? null : v * factor
   );
 }
@@ -168,7 +168,7 @@ function createDynamicChart(
   // Build cell voltage series if selected
   const cellVoltageColors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#a855f7'];
   let cellVoltageSeries: { label: string; data: (number | null)[]; color: string; unit: string }[] = [];
-  
+
   if (hasAllCellVoltages) {
     const cellVoltages = data.cellVoltages;
     if (cellVoltages && cellVoltages.length > 0) {
@@ -366,8 +366,8 @@ function loadChartConfigs(): TelemetryChartsConfig {
             ...DEFAULT_CHART_CONFIGS[key],
             ...parsed[key],
             // Ensure selectedFields is never empty - use default if stored is empty
-            selectedFields: parsed[key].selectedFields?.length > 0 
-              ? parsed[key].selectedFields 
+            selectedFields: parsed[key].selectedFields?.length > 0
+              ? parsed[key].selectedFields
               : DEFAULT_CHART_CONFIGS[key].selectedFields,
           };
         }
@@ -462,11 +462,10 @@ function ChartHeader({
         <button
           type="button"
           onClick={() => setIsDropdownOpen(v => !v)}
-          className={`text-[11px] h-6 px-2.5 py-1 flex items-center gap-1.5 rounded-md border-2 transition-colors ${
-            isLight
+          className={`text-[11px] h-6 px-2.5 py-1 flex items-center gap-1.5 rounded-md border-2 transition-colors ${isLight
               ? 'bg-gray-100 border-sky-400 text-gray-700 hover:bg-gray-200 hover:border-sky-500'
               : 'bg-drone-surface border-sky-500/60 text-gray-300 hover:bg-gray-700 hover:border-sky-400'
-          }`}
+            }`}
           title={t('telemetry.selectData')}
         >
           <span className="font-medium">{config.selectedFields.length}/4</span>
@@ -483,11 +482,10 @@ function ChartHeader({
             />
             <div
               ref={dropdownRef}
-              className={`absolute left-0 top-full mt-1 z-50 w-52 max-h-64 rounded-lg border-2 shadow-xl flex flex-col overflow-hidden ${
-                isLight
+              className={`absolute left-0 top-full mt-1 z-50 w-52 max-h-64 rounded-lg border-2 shadow-xl flex flex-col overflow-hidden ${isLight
                   ? 'bg-white border-sky-400'
                   : 'bg-drone-surface border-sky-500/60'
-              }`}
+                }`}
             >
               {/* Search input */}
               <div className={`px-2 pt-2 pb-1 border-b flex-shrink-0 ${isLight ? 'border-gray-200' : 'border-gray-700'}`}>
@@ -514,11 +512,10 @@ function ChartHeader({
                   }}
                   placeholder={t('telemetry.searchFields')}
                   autoFocus
-                  className={`w-full text-[11px] rounded px-2 py-1 border focus:outline-none ${
-                    isLight
+                  className={`w-full text-[11px] rounded px-2 py-1 border focus:outline-none ${isLight
                       ? 'bg-gray-50 text-gray-800 border-gray-300 focus:border-sky-500 placeholder-gray-400'
                       : 'bg-drone-dark text-gray-200 border-gray-600 focus:border-drone-primary placeholder-gray-500'
-                  }`}
+                    }`}
                 />
               </div>
 
@@ -541,8 +538,7 @@ function ChartHeader({
                         onClick={() => !isDisabled && handleFieldToggle(field.id)}
                         onMouseEnter={() => setHighlightedIndex(index)}
                         disabled={isDisabled}
-                        className={`w-full text-left px-2.5 py-1.5 text-[11px] flex items-center gap-2 transition-colors ${
-                          isDisabled && isLastSelected
+                        className={`w-full text-left px-2.5 py-1.5 text-[11px] flex items-center gap-2 transition-colors ${isDisabled && isLastSelected
                             ? isLight ? 'bg-sky-100/50 text-sky-600 cursor-not-allowed' : 'bg-sky-500/10 text-sky-300 cursor-not-allowed'
                             : isDisabled
                               ? isLight ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 cursor-not-allowed'
@@ -551,15 +547,14 @@ function ChartHeader({
                                 : index === highlightedIndex
                                   ? isLight ? 'bg-gray-100' : 'bg-gray-700/50'
                                   : isLight ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 hover:bg-gray-700/50'
-                        }`}
+                          }`}
                         title={isLastSelected ? t('telemetry.cannotDeselect') : undefined}
                       >
                         <span
-                          className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${
-                            isSelected
+                          className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${isSelected
                               ? 'border-sky-500 bg-sky-500'
                               : isLight ? 'border-gray-400' : 'border-gray-600'
-                          }`}
+                            }`}
                         >
                           {isSelected && (
                             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -618,15 +613,15 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
     () =>
       resolvedTheme === 'light'
         ? {
-            background: '#ffffff',
-            border: '#e2e8f0',
-            text: '#0f172a',
-          }
+          background: '#ffffff',
+          border: '#e2e8f0',
+          text: '#0f172a',
+        }
         : {
-            background: '#16213e',
-            border: '#4a4e69',
-            text: '#ffffff',
-          },
+          background: '#16213e',
+          border: '#4a4e69',
+          text: '#ffffff',
+        },
     [resolvedTheme]
   );
 
@@ -788,7 +783,7 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
     },
     [data, splitLineColor, tooltipColors, tooltipFormatter, unitSystem, chartConfigs.altitudeSpeed, t]
   );
-  
+
   const batteryOption = useMemo(
     () => {
       const config = chartConfigs.battery;
@@ -807,7 +802,7 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
     },
     [data, splitLineColor, tooltipColors, tooltipFormatter, unitSystem, chartConfigs.battery, t]
   );
-  
+
   const cellVoltageOption = useMemo(
     () => {
       const config = chartConfigs.cellVoltage;
@@ -828,7 +823,7 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
     },
     [data, splitLineColor, tooltipColors, tooltipFormatter, unitSystem, chartConfigs.cellVoltage, t]
   );
-  
+
   const attitudeOption = useMemo(
     () => {
       const config = chartConfigs.attitude;
@@ -847,7 +842,7 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
     },
     [data, splitLineColor, tooltipColors, tooltipFormatter, unitSystem, chartConfigs.attitude, t]
   );
-  
+
   const rcSignalOption = useMemo(
     () => {
       const config = chartConfigs.rcSignal;
@@ -866,7 +861,7 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
     },
     [data, splitLineColor, tooltipColors, tooltipFormatter, unitSystem, chartConfigs.rcSignal, t]
   );
-  
+
   const distanceToHomeOption = useMemo(
     () => {
       const config = chartConfigs.distanceToHome;
@@ -885,7 +880,7 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
     },
     [data, splitLineColor, tooltipColors, tooltipFormatter, unitSystem, chartConfigs.distanceToHome, t]
   );
-  
+
   const velocityOption = useMemo(
     () => {
       const config = chartConfigs.velocity;
@@ -904,7 +899,7 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
     },
     [data, splitLineColor, tooltipColors, tooltipFormatter, unitSystem, chartConfigs.velocity, t]
   );
-  
+
   const gpsOption = useMemo(
     () => {
       const config = chartConfigs.gps;
@@ -926,14 +921,13 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-1.5">
+      <div className="flex justify-start md:justify-end gap-1.5">
         <button
           onClick={() => setMapSyncEnabled(!mapSyncEnabled)}
-          className={`text-xs border rounded px-2 py-1 transition-colors ${
-            mapSyncEnabled
+          className={`text-xs border rounded px-2 py-1 transition-colors ${mapSyncEnabled
               ? 'text-drone-accent border-drone-accent/50 bg-drone-accent/10'
               : 'text-gray-400 hover:text-white border-gray-700'
-          }`}
+            }`}
           title={mapSyncEnabled ? 'Disable map sync' : 'Enable map sync'}
         >
           <svg className="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -943,11 +937,10 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
         </button>
         <button
           onClick={toggleDragZoom}
-          className={`text-xs border rounded px-2 py-1 transition-colors ${
-            dragZoomActive
+          className={`hidden md:inline-block text-xs border rounded px-2 py-1 transition-colors ${dragZoomActive
               ? 'text-drone-primary border-drone-primary/50 bg-drone-primary/10'
               : 'text-gray-400 hover:text-white border-gray-700'
-          }`}
+            }`}
           title={dragZoomActive ? 'Disable drag to zoom' : 'Enable drag to zoom'}
         >
           <svg className="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" viewBox="0 0 1024 1024" fill="currentColor">
@@ -957,7 +950,7 @@ export function TelemetryCharts({ data, unitSystem, startTime }: TelemetryCharts
         </button>
         <button
           onClick={resetZoom}
-          className="text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1"
+          className="hidden md:inline-block text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1"
           title="Reset zoom on all charts"
         >
           {t('telemetry.resetZoom')}
@@ -1785,51 +1778,51 @@ function createRcSignalChart(
   const series: LineSeriesOption[] = [
     ...(showCombined
       ? [
-          {
-            name: t('telemetry.rcSignal'),
-            type: 'line' as const,
-            data: data.rcSignal,
-            smooth: true,
-            symbol: 'none',
-            itemStyle: {
-              color: '#22c55e',
-            },
-            lineStyle: {
-              color: '#22c55e',
-              width: 1.5,
-            },
+        {
+          name: t('telemetry.rcSignal'),
+          type: 'line' as const,
+          data: data.rcSignal,
+          smooth: true,
+          symbol: 'none',
+          itemStyle: {
+            color: '#22c55e',
           },
-        ]
+          lineStyle: {
+            color: '#22c55e',
+            width: 1.5,
+          },
+        },
+      ]
       : [
-          {
-            name: t('telemetry.rcUplink'),
-            type: 'line' as const,
-            data: rcUplink,
-            smooth: true,
-            symbol: 'none',
-            itemStyle: {
-              color: '#22c55e',
-            },
-            lineStyle: {
-              color: '#22c55e',
-              width: 1.5,
-            },
+        {
+          name: t('telemetry.rcUplink'),
+          type: 'line' as const,
+          data: rcUplink,
+          smooth: true,
+          symbol: 'none',
+          itemStyle: {
+            color: '#22c55e',
           },
-          {
-            name: t('telemetry.rcDownlink'),
-            type: 'line' as const,
-            data: rcDownlink,
-            smooth: true,
-            symbol: 'none',
-            itemStyle: {
-              color: '#38bdf8',
-            },
-            lineStyle: {
-              color: '#38bdf8',
-              width: 1.5,
-            },
+          lineStyle: {
+            color: '#22c55e',
+            width: 1.5,
           },
-        ]),
+        },
+        {
+          name: t('telemetry.rcDownlink'),
+          type: 'line' as const,
+          data: rcDownlink,
+          smooth: true,
+          symbol: 'none',
+          itemStyle: {
+            color: '#38bdf8',
+          },
+          lineStyle: {
+            color: '#38bdf8',
+            width: 1.5,
+          },
+        },
+      ]),
   ];
   return {
     ...baseChartConfig,

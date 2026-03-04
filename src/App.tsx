@@ -27,12 +27,12 @@ function InitializationOverlay() {
             />
           </svg>
         </div>
-        
+
         <div className="text-center">
           <h2 className="text-lg font-medium text-white mb-2">{t('app.initializing')}</h2>
           <p className="text-sm text-gray-400">{t('app.initProgress')}</p>
         </div>
-        
+
         {/* Animated progress bar */}
         <div className="w-64 h-1.5 bg-gray-700 rounded-full overflow-hidden">
           <div className="h-full w-1/2 bg-drone-primary rounded-full init-progress-bar" />
@@ -156,17 +156,16 @@ function App() {
     <div className="w-full h-full flex flex-col bg-drone-dark overflow-hidden">
       {/* Initialization overlay - shown during DB migration */}
       {!isFlightsInitialized && <InitializationOverlay />}
-      
+
       {showDonationBanner && (
         <div
-          className={`w-full border-b border-drone-primary/40 text-gray-100 ${
-            resolvedTheme === 'light'
+          className={`w-full border-b border-drone-primary/40 text-gray-100 ${resolvedTheme === 'light'
               ? 'bg-gradient-to-r from-violet-200 via-fuchsia-200 to-orange-200 text-gray-900'
               : 'bg-gradient-to-r from-violet-900 via-purple-900 to-orange-900'
-          }`}
+            }`}
         >
           <div className="relative mx-auto flex w-full items-center justify-center gap-4 px-4 py-[17px]">
-            <div className="flex flex-nowrap items-center justify-center gap-2 text-[0.95rem] md:text-[1rem] text-center px-6">
+            <div className="flex flex-wrap items-center justify-center gap-2 text-[0.95rem] md:text-[1rem] text-center px-6 pr-8">
               <span>
                 {t('app.bannerText')}
               </span>
@@ -203,11 +202,10 @@ function App() {
             </div>
             <button
               onClick={handleDismissBanner}
-              className={`absolute right-3 md:right-4 rounded-md px-2.5 py-1.5 transition-colors ${
-                resolvedTheme === 'light'
+              className={`absolute right-3 md:right-4 rounded-md px-2.5 py-1.5 transition-colors ${resolvedTheme === 'light'
                   ? 'text-gray-600 hover:text-gray-900'
                   : 'text-gray-300 hover:text-white'
-              }`}
+                }`}
               aria-label={t('app.dismissBanner')}
               title={t('app.dismiss')}
             >

@@ -321,7 +321,10 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
     if (typeof window === 'undefined') return 'progress';
     return (window.sessionStorage.getItem('map:colorBy') as ColorByMode) || 'progress';
   });
-  const [showTooltip, setShowTooltip] = useState(() => getSessionBool('map:showTooltip', true));
+  const [showTooltip, setShowTooltip] = useState(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    return getSessionBool('map:showTooltip', !isMobile);
+  });
   const [showAircraft, setShowAircraft] = useState(() => getSessionBool('map:showAircraft', true));
   const [showMedia, setShowMedia] = useState(() => getSessionBool('map:showMedia', false));
   const [showMessages, setShowMessages] = useState(() => getSessionBool('map:showMessages', true));
@@ -332,7 +335,10 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
   });
   const [mapSettingsCollapsed, setMapSettingsCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return window.sessionStorage.getItem('map:settingsCollapsed') === 'true';
+    const isMobile = window.innerWidth < 768;
+    const stored = window.sessionStorage.getItem('map:settingsCollapsed');
+    if (stored !== null) return stored === 'true';
+    return isMobile;
   });
   const [hoverInfo, setHoverInfo] = useState<{
     x: number; y: number;
@@ -1666,12 +1672,11 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
       {/* Message popup — centered at top during playback */}
       {activeMessage && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none max-w-[400px]">
-          <div className={`flex items-start gap-2.5 rounded-lg px-3.5 py-2.5 shadow-lg backdrop-blur ${
-            activeMessage.messageType === 'caution'
-              ? 'bg-red-900/90 border border-red-600/60'
-              : activeMessage.messageType === 'warn'
-                ? 'bg-amber-900/90 border border-amber-600/60'
-                : 'bg-blue-900/90 border border-blue-600/60'
+          <div className={`flex items-start gap-2.5 rounded-lg px-3.5 py-2.5 shadow-lg backdrop-blur ${activeMessage.messageType === 'caution'
+            ? 'bg-red-900/90 border border-red-600/60'
+            : activeMessage.messageType === 'warn'
+              ? 'bg-amber-900/90 border border-amber-600/60'
+              : 'bg-blue-900/90 border border-blue-600/60'
             }`}>
             {activeMessage.messageType === 'caution' ? (
               <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1686,9 +1691,8 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            <span className={`text-sm font-medium ${
-              activeMessage.messageType === 'caution' ? 'text-red-100'
-                : activeMessage.messageType === 'warn' ? 'text-amber-100' : 'text-blue-100'
+            <span className={`text-sm font-medium ${activeMessage.messageType === 'caution' ? 'text-red-100'
+              : activeMessage.messageType === 'warn' ? 'text-amber-100' : 'text-blue-100'
               }`}>
               {activeMessage.message}
             </span>

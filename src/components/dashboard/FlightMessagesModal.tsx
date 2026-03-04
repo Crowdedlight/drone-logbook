@@ -153,7 +153,7 @@ export function FlightMessagesModal({
         </div>
 
         {/* Column labels */}
-        <div className="grid grid-cols-[72px_64px_1fr] gap-x-3 px-5 py-2 border-b border-gray-700/50 flex-shrink-0">
+        <div className="grid grid-cols-[56px_48px_1fr] sm:grid-cols-[72px_64px_1fr] gap-x-2 sm:gap-x-3 px-3 sm:px-5 py-2 border-b border-gray-700/50 flex-shrink-0">
           <span className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
             {t('dashboard.messagesColTime')}
           </span>
@@ -178,9 +178,8 @@ export function FlightMessagesModal({
               return (
                 <div
                   key={idx}
-                  className={`grid grid-cols-[72px_64px_1fr] gap-x-3 items-baseline px-5 py-3 transition-colors ${
-                    isCaution ? 'hover:bg-red-900/10' : isWarn ? 'hover:bg-amber-900/10' : 'hover:bg-blue-900/10'
-                  }`}
+                  className={`grid grid-cols-[56px_48px_1fr] sm:grid-cols-[72px_64px_1fr] gap-x-2 sm:gap-x-3 items-baseline px-3 sm:px-5 py-3 transition-colors ${isCaution ? 'hover:bg-red-900/10' : isWarn ? 'hover:bg-amber-900/10' : 'hover:bg-blue-900/10'
+                    }`}
                 >
                   {/* Clock time */}
                   <span className="text-[11px] font-medium text-gray-200 tabular-nums leading-tight">
@@ -238,9 +237,8 @@ export function FlightMessagesModal({
                       </svg>
                     )}
                     <span
-                      className={`text-sm leading-snug break-words min-w-0 ${
-                        isCaution ? 'text-red-200' : isWarn ? 'text-amber-200' : 'text-blue-200'
-                      }`}
+                      className={`text-sm leading-snug break-words min-w-0 ${isCaution ? 'text-red-200' : isWarn ? 'text-amber-200' : 'text-blue-200'
+                        }`}
                     >
                       {msg.message}
                     </span>
