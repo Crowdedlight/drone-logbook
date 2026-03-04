@@ -398,14 +398,26 @@ export function Dashboard() {
           >
             ‹
           </button>
-          {/* Mobile close button for sidebar */}
-          <button
-            onClick={() => setIsSidebarHidden(true)}
-            className="absolute right-4 top-4 bg-gray-800 border border-gray-700 rounded-lg p-2 text-gray-300 hover:text-white z-50 md:hidden"
-            title={t('dashboard.hideSidebar')}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+          {/* Mobile close + settings buttons for sidebar */}
+          <div className="absolute right-4 top-4 flex items-center gap-2 z-50 md:hidden">
+            <button
+              onClick={() => { setIsSidebarHidden(true); setShowSettings(true); }}
+              className="sidebar-mobile-btn border rounded-lg p-2 transition-colors"
+              title={t('dashboard.settings')}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setIsSidebarHidden(true)}
+              className="sidebar-mobile-btn border rounded-lg p-2 transition-colors"
+              title={t('dashboard.hideSidebar')}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
           <div
             onMouseDown={() => {
               resizingRef.current = 'sidebar';
@@ -429,14 +441,16 @@ export function Dashboard() {
 
       {/* Mobile Show Sidebar Button */}
       {isSidebarHidden && (
-        <button
-          onClick={() => setIsSidebarHidden(false)}
-          className="fixed bottom-6 right-6 p-4 bg-drone-primary text-white rounded-full shadow-lg z-40 md:hidden flex items-center justify-center hover:bg-sky-400 transition-colors"
-          title={t('dashboard.showSidebar')}
-          style={{ boxShadow: '0 4px 14px 0 rgba(14, 165, 233, 0.39)' }}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-        </button>
+        <div className="fixed bottom-6 right-6 z-40 md:hidden">
+          <button
+            onClick={() => setIsSidebarHidden(false)}
+            className="p-4 bg-drone-primary text-white rounded-full shadow-lg flex items-center justify-center hover:bg-sky-400 transition-colors"
+            title={t('dashboard.showSidebar')}
+            style={{ boxShadow: '0 4px 14px 0 rgba(14, 165, 233, 0.39)' }}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+        </div>
       )}
 
       {/* Main Content */}
@@ -533,7 +547,7 @@ export function Dashboard() {
                   />
 
                   {/* Flight Map */}
-                  <div className="card flex flex-col h-[400px] md:h-auto md:min-h-0 overflow-hidden" style={{ flexBasis: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${100 - mainSplit}%` : 'auto' }}>
+                  <div className="card flex flex-col h-[540px] md:h-auto md:min-h-0 overflow-hidden" style={{ flexBasis: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${100 - mainSplit}%` : 'auto' }}>
                     <div className="px-3 py-2.5 border-b border-gray-700 flex items-center justify-between">
                       <h2 className="font-semibold text-white">{t('dashboard.flightPath')}</h2>
                       {currentFlightData?.messages && currentFlightData.messages.length > 0 && (

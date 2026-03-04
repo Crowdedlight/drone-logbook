@@ -323,7 +323,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -331,7 +331,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       />
 
       {/* Modal - use grid to handle overflow properly */}
-      <div className="relative bg-drone-secondary rounded-xl border border-gray-700 shadow-2xl w-full max-w-[845px] max-h-full grid grid-rows-[auto_1fr]">
+      <div className="relative bg-drone-secondary rounded-xl border border-gray-700 shadow-2xl w-full max-w-[845px] max-h-[calc(100vh-2rem)] grid grid-rows-[auto_1fr]">
         {/* Blocking overlay while a long-running operation is in progress */}
         {isBusy && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 dark:bg-black/60 backdrop-blur-[2px] rounded-xl">
@@ -374,13 +374,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         {/* Content — two columns - scrollable area */}
-        <div className="p-4 overflow-y-auto min-h-0">
+        <div className="p-4 overflow-y-auto min-h-0 settings-scroll">
           <div className="flex flex-col md:flex-row gap-6 md:gap-0">
             {/* Left Column: Preferences & API Key */}
             <div className="flex-1 space-y-4 md:pr-5">
-              {/* Units + Theme side by side */}
-              <div className="flex gap-3">
-                <div className="flex flex-col gap-1 flex-1">
+              {/* Units + Theme + Time Format — stack on mobile */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
                   <label className="text-xs font-medium text-gray-400">
                     {t('settings.units')}
                   </label>
@@ -393,7 +393,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     ]}
                   />
                 </div>
-                <div className="flex flex-col gap-1 flex-1">
+                <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-gray-400">
                     {t('settings.theme')}
                   </label>
@@ -407,7 +407,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     ]}
                   />
                 </div>
-                <div className="flex flex-col gap-1 flex-1">
+                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
                   <label className="text-xs font-medium text-gray-400 flex items-center gap-1.5">
                     {t('settings.timeFormat', 'Time Format')}
                     {isTimeFormatPending && (
@@ -435,10 +435,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </div>
               </div>
 
-              {/* Language + Number & Date Format side by side */}
-              <div className="flex gap-3">
+              {/* Language + Number & Date Format — stack on mobile */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {/* App Language */}
-                <div className="flex flex-col gap-1 flex-1">
+                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
                   <label className="text-xs font-medium text-gray-400">
                     {t('settings.language')}
                   </label>
@@ -462,7 +462,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   />
                 </div>
                 {/* Number Format */}
-                <div className="flex flex-col gap-1 flex-1">
+                <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-gray-400">
                     {t('settings.numbers')}
                   </label>
@@ -477,7 +477,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   />
                 </div>
                 {/* Date Format */}
-                <div className="flex flex-col gap-1 flex-1">
+                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
                   <label className="text-xs font-medium text-gray-400">
                     {t('settings.dates')}
                   </label>

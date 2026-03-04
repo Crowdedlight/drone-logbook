@@ -159,50 +159,53 @@ function App() {
 
       {showDonationBanner && (
         <div
-          className={`w-full border-b border-drone-primary/40 text-gray-100 ${resolvedTheme === 'light'
+          className={`w-full border-b border-drone-primary/40 text-gray-100 overflow-hidden ${resolvedTheme === 'light'
               ? 'bg-gradient-to-r from-violet-200 via-fuchsia-200 to-orange-200 text-gray-900'
               : 'bg-gradient-to-r from-violet-900 via-purple-900 to-orange-900'
             }`}
         >
-          <div className="relative mx-auto flex w-full items-center justify-center gap-4 px-4 py-[17px]">
-            <div className="flex flex-wrap items-center justify-center gap-2 text-[0.95rem] md:text-[1rem] text-center px-6 pr-8">
-              <span>
-                {t('app.bannerText')}
-              </span>
-              <a
-                href="https://github.com/arpanghosh8453/open-dronelog"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={
-                  resolvedTheme === 'light'
-                    ? 'text-indigo-700 hover:underline font-semibold'
-                    : 'text-drone-primary hover:underline font-semibold'
-                }
-              >
-                GitHub
-              </a> {t('app.bannerBy')}
-              <span className={resolvedTheme === 'light' ? 'text-gray-500' : 'text-gray-400'}>
-                •
-              </span>
-              <span>
-                {t('app.bannerSupport')}
-              </span>
-              <a
-                href="https://ko-fi.com/arpandesign"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={
-                  resolvedTheme === 'light'
-                    ? 'text-indigo-700 hover:underline font-semibold'
-                    : 'text-amber-300 hover:text-amber-200 hover:underline font-semibold'
-                }
-              >
-                Ko-fi
-              </a>
+          <div className="relative flex items-center w-full py-2.5 md:py-[17px]">
+            {/* Scrolling marquee for mobile, centered static for desktop */}
+            <div className="marquee-container flex-1 overflow-hidden mx-8 md:mx-0">
+              <div className="marquee-content md:marquee-paused flex items-center gap-2 whitespace-nowrap text-[0.85rem] md:text-[1rem] md:justify-center md:whitespace-normal md:flex-wrap">
+                <span>
+                  {t('app.bannerText')}
+                </span>
+                <a
+                  href="https://github.com/arpanghosh8453/open-dronelog"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={
+                    resolvedTheme === 'light'
+                      ? 'text-indigo-700 hover:underline font-semibold'
+                      : 'text-drone-primary hover:underline font-semibold'
+                  }
+                >
+                  GitHub
+                </a> {t('app.bannerBy')}
+                <span className={resolvedTheme === 'light' ? 'text-gray-500' : 'text-gray-400'}>
+                  •
+                </span>
+                <span>
+                  {t('app.bannerSupport')}
+                </span>
+                <a
+                  href="https://ko-fi.com/arpandesign"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={
+                    resolvedTheme === 'light'
+                      ? 'text-indigo-700 hover:underline font-semibold'
+                      : 'text-amber-300 hover:text-amber-200 hover:underline font-semibold'
+                  }
+                >
+                  Ko-fi
+                </a>
+              </div>
             </div>
             <button
               onClick={handleDismissBanner}
-              className={`absolute right-3 md:right-4 rounded-md px-2.5 py-1.5 transition-colors ${resolvedTheme === 'light'
+              className={`absolute right-2 md:right-4 rounded-md px-2 py-1.5 transition-colors flex-shrink-0 z-10 ${resolvedTheme === 'light'
                   ? 'text-gray-600 hover:text-gray-900'
                   : 'text-gray-300 hover:text-white'
                 }`}
