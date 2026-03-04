@@ -4,11 +4,11 @@
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import Map, { NavigationControl, Marker } from 'react-map-gl/maplibre';
+import Map, { NavigationControl, Marker, useControl } from 'react-map-gl/maplibre';
 import type { MapRef } from 'react-map-gl/maplibre';
 import type { StyleSpecification } from 'maplibre-gl';
 import { PathLayer, ScatterplotLayer, TextLayer, IconLayer } from '@deck.gl/layers';
-import DeckGL from '@deck.gl/react';
+import { MapboxOverlay } from '@deck.gl/mapbox';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getTrackCenter, calculateBounds, formatAltitude, formatSpeed, formatDistance } from '@/lib/utils';
 import { useFlightStore } from '@/stores/flightStore';
@@ -205,6 +205,28 @@ const ARROW_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" heigh
 </svg>`;
 const ARROW_ICON_URL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(ARROW_ICON_SVG)}`;
 
+/**
+ * Integrates deck.gl layers into MapLibre's own WebGL context via MapboxOverlay.
+ * This avoids creating a second WebGL context which fails on mobile devices
+ * due to context limits (especially iOS Safari).
+ *
+ * Uses interleaved: false (default) so deck.gl renders all layers as an overlay
+ * on top of the MapLibre scene. This prevents path segments from clipping against
+ * terrain and keeps media markers above map elements.
+ */
+function DeckGLOverlay(props: {
+  layers: any[];
+  pickingRadius?: number;
+  overlayRef?: React.MutableRefObject<MapboxOverlay | null>;
+}) {
+  const { overlayRef, ...overlayProps } = props;
+  const overlay = useControl(() => new MapboxOverlay(overlayProps));
+  overlay.setProps(overlayProps);
+  // Expose overlay instance for external picking / snapshot use
+  if (overlayRef) overlayRef.current = overlay;
+  return null;
+}
+
 /* ─── Directional arrow stick widget ────────────────────────────── */
 
 interface RCStickPadProps {
@@ -295,9 +317,11 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
   } | null>(null);
   const { unitSystem, locale, mapSyncEnabled, setMapReplayProgress } = useFlightStore();
   const mapRef = useRef<MapRef | null>(null);
-  const deckRef = useRef<any>(null);
+  const overlayRef = useRef<MapboxOverlay | null>(null);
 
   // Capture map snapshot when requested (for FlyCard export)
+  // With MapboxOverlay, deck.gl renders into MapLibre's own canvas —
+  // a single canvas capture gets both the map tiles and the flight path.
   const captureMapSnapshot = useCallback(() => {
     const map = mapRef.current?.getMap();
     if (!map) {
@@ -306,54 +330,15 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
     }
 
     try {
-      // Force both map and deck.gl to render
       map.triggerRepaint();
-      const deckInstance = deckRef.current?.deck;
-      deckInstance?.redraw('capture');
 
-      // Get the map canvas
       const mapCanvas = map.getCanvas();
       if (!mapCanvas) {
         console.warn('Map canvas not available');
         return null;
       }
 
-      // Create a new canvas to combine map + deck.gl overlay
-      const combinedCanvas = document.createElement('canvas');
-      combinedCanvas.width = mapCanvas.width;
-      combinedCanvas.height = mapCanvas.height;
-      const ctx = combinedCanvas.getContext('2d');
-      if (!ctx) return null;
-
-      // Draw the map base layer
-      ctx.drawImage(mapCanvas, 0, 0);
-
-      // Get deck.gl canvas using the getCanvas() method
-      const deckCanvas = deckInstance?.getCanvas();
-      if (deckCanvas && deckCanvas.width > 0 && deckCanvas.height > 0) {
-        try {
-          ctx.drawImage(deckCanvas, 0, 0);
-        } catch (e) {
-          console.warn('Could not draw deck.gl canvas:', e);
-          // If deck.gl canvas fails, try to find it in the parent container
-          const mapContainer = mapRef.current?.getContainer();
-          const parent = mapContainer?.parentElement;
-          if (parent) {
-            const allCanvases = parent.querySelectorAll('canvas');
-            allCanvases.forEach((canvas) => {
-              if (canvas !== mapCanvas && canvas.width > 0 && canvas.height > 0) {
-                try {
-                  ctx.drawImage(canvas, 0, 0);
-                } catch {
-                  // Canvas might be tainted
-                }
-              }
-            });
-          }
-        }
-      }
-
-      return combinedCanvas.toDataURL('image/png');
+      return mapCanvas.toDataURL('image/png');
     } catch (err) {
       console.error('Failed to capture map snapshot:', err);
       return null;
@@ -1289,16 +1274,14 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
     <div
       className="relative h-full w-full min-h-0"
       onMouseMove={(e) => {
-        if (!showTooltip || !deckRef.current || replayActive) {
+        if (!showTooltip || !overlayRef.current || replayActive) {
           if (hoverInfo) setHoverInfo(null);
           return;
         }
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        const deck = deckRef.current.deck;
-        if (!deck) { setHoverInfo(null); return; }
-        const picked = deck.pickObject({ x, y, radius: 12 });
+        const picked = overlayRef.current.pickObject({ x, y, radius: 12 });
         if (picked?.object?.meta) {
           const { meta } = picked.object;
           setHoverInfo({ x, y, ...meta });
@@ -1471,21 +1454,12 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
         </div>
 
 
+        <DeckGLOverlay
+          layers={[...deckLayers, ...mediaLayers, ...replayDeckLayers]}
+          pickingRadius={12}
+          overlayRef={overlayRef}
+        />
       </Map>
-
-      <DeckGL
-        ref={deckRef}
-        viewState={viewState}
-        controller={false}
-        layers={[...deckLayers, ...mediaLayers, ...replayDeckLayers]}
-        pickingRadius={12}
-        style={{
-          width: '100%', height: '100%',
-          pointerEvents: 'none',
-          position: 'absolute', top: '0', right: '0', bottom: '0', left: '0',
-          zIndex: '1',
-        }}
-      />
 
       {/* Hover tooltip — hidden during replay */}
       {hoverInfo && showTooltip && !replayActive && (
