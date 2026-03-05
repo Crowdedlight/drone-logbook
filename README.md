@@ -136,7 +136,27 @@ There is no installation step if you want to use the standalone binary builds, j
 > When you are copying from RC or mobile device, you can NOT directly drag and drop the files to the interface. This is because these external devices are mounted differently and only accessible to the file manager. Please copy the files to a local folder or the device sync folder before trying to upload or sync. 
 
 > [!TIP]
-> Explore the [full manual](/docs/manual.md) if you want to have a comprehensive overview of all the available options and features inside the app. 
+> Explore the [full manual](/docs/manual.md) if you want to have a comprehensive overview of all the available options and features inside the app.
+
+###  Windows (64-bit)
+* **`Open.DroneLog_(version)_x64-setup.exe`**: Standard installer. **Best for most users.**
+* **`open-dronelog_windows_x64.exe`**: Portable version. Runs instantly without installing.
+* **`Open.DroneLog_(version)_x64_en-US.msi`**: Enterprise installer. For IT admins deploying to multiple PCs.
+
+###  macOS
+*(Files available for both `aarch64` / Apple Silicon and `x64` / Intel)*
+* **`...dmg`**: Standard disk image. **Best for most users** (drag and drop to Applications).
+* **`...app.tar.gz`**: Compressed app bundle. A quick, alternative way to download the app without mounting a drive.
+* **`open-dronelog_darwin_...`**: Command-line binary. For advanced terminal users only.
+
+###  Linux (64-bit)
+* **`Open.DroneLog_(version)_amd64.deb`**: Package for **Ubuntu, Mint, and Debian** systems.
+* **`Open.DroneLog-(version).x86_64.rpm`**: Package for **Fedora, CentOS, and Red Hat** systems.
+* **`Open.DroneLog_(version)_amd64.AppImage`**: Universal portable app. Runs on any Linux distro without installing.
+* **`open-dronelog_linux_x86_64`**: Command-line binary. For advanced terminal users only.
+
+###  General / Verification
+* **`checksums.txt`**: Security file. Use to verify your downloaded files aren't corrupted or tampered with.
 
 ### Try the Webapp First (No Installation Required)
 
