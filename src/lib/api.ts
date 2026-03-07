@@ -35,6 +35,17 @@ async function getTauriInvoke() {
 // Web fetch helpers
 // ============================================================================
 
+// ============================================================================
+// Session-expired callback (avoids circular import with the store)
+// ============================================================================
+
+let _onSessionExpired: (() => void) | null = null;
+
+/** Register a callback invoked when a 401 indicates the session is stale. */
+export function onSessionExpired(cb: () => void): void {
+  _onSessionExpired = cb;
+}
+
 /**
  * Read a profile-related key, preferring the tab-scoped sessionStorage
  * (so each tab can be on a different profile) and falling back to
@@ -99,6 +110,12 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
       errorMsg = parsed.error || body;
     } catch {
       errorMsg = body;
+    }
+    // On 401 the session token is expired or invalid — clear it and
+    // notify the store so the login overlay is shown.
+    if (response.status === 401) {
+      removeProfileKey('profileSession');
+      _onSessionExpired?.();
     }
     throw new Error(errorMsg);
   }

@@ -1156,3 +1156,8 @@ export const useFlightStore = create<FlightState>((set, get) => ({
     set({ needsAuth: true, isFlightsInitialized: false });
   },
 }));
+
+// Register automatic logout when the server returns 401 (expired / invalid token).
+api.onSessionExpired(() => {
+  useFlightStore.getState().logout();
+});
