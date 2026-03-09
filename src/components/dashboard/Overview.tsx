@@ -81,8 +81,12 @@ export function Overview({ stats, flights, unitSystem, onSelectFlight }: Overvie
     const totalDurationSecs = filteredFlights.reduce((sum, f) => sum + (f.durationSecs ?? 0), 0);
     const totalPhotos = filteredFlights.reduce((sum, f) => sum + (f.photoCount ?? 0), 0);
     const totalVideos = filteredFlights.reduce((sum, f) => sum + (f.videoCount ?? 0), 0);
-    const maxAltitudeM = Math.max(0, ...filteredFlights.map((f) => f.maxAltitude ?? 0));
-    const maxSpeedMs = Math.max(0, ...filteredFlights.map((f) => f.maxSpeed ?? 0));
+    let maxAltitudeM = 0;
+    let maxSpeedMs = 0;
+    for (const f of filteredFlights) {
+      if ((f.maxAltitude ?? 0) > maxAltitudeM) maxAltitudeM = f.maxAltitude!;
+      if ((f.maxSpeed ?? 0) > maxSpeedMs) maxSpeedMs = f.maxSpeed!;
+    }
 
     // Battery usage (normalize serials for consistent aggregation)
     const batteryMap = new Map<string, { count: number; duration: number; maxCycleCount: number | null }>();
@@ -1113,7 +1117,10 @@ function DroneFlightTimeList({
   }
 
   // Find max duration for progress bar scaling
-  const maxDuration = Math.max(...drones.map((d) => d.totalDurationSecs));
+  let maxDuration = 0;
+  for (const d of drones) {
+    if (d.totalDurationSecs > maxDuration) maxDuration = d.totalDurationSecs;
+  }
 
   const handleStartRename = (serial: string, fallbackName: string) => {
     setEditingSerial(serial);
@@ -1723,7 +1730,10 @@ function BatteryHealthList({
   };
 
   const allCapY = capacitySeries.flatMap((s) => s.data.map((p: [number, number]) => p[1]));
-  const capYMax = allCapY.length ? Math.max(...allCapY) : 5000;
+  let capYMax = 5000;
+  for (let i = 0; i < allCapY.length; i++) {
+    if (allCapY[i] > capYMax) capYMax = allCapY[i];
+  }
 
   const titleColor = isLight ? '#0f172a' : '#e5e7eb';
   const axisLineColor = isLight ? '#cbd5f5' : '#374151';

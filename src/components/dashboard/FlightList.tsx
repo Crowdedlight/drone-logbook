@@ -645,9 +645,15 @@ export function FlightList({
       .map((f) => f.durationSecs ?? 0)
       .filter((d) => d > 0);
     if (durations.length === 0) return { minMins: 0, maxMins: 60 };
+    let minD = durations[0];
+    let maxD = durations[0];
+    for (let i = 1; i < durations.length; i++) {
+      if (durations[i] < minD) minD = durations[i];
+      if (durations[i] > maxD) maxD = durations[i];
+    }
     return {
-      minMins: Math.floor(Math.min(...durations) / 60),
-      maxMins: Math.ceil(Math.max(...durations) / 60),
+      minMins: Math.floor(minD / 60),
+      maxMins: Math.ceil(maxD / 60),
     };
   }, [crossFiltered.forDuration]);
 
@@ -656,9 +662,15 @@ export function FlightList({
       .map((f) => f.maxAltitude ?? 0)
       .filter((a) => a > 0);
     if (altitudes.length === 0) return { min: 0, max: 500 };
+    let minA = altitudes[0];
+    let maxA = altitudes[0];
+    for (let i = 1; i < altitudes.length; i++) {
+      if (altitudes[i] < minA) minA = altitudes[i];
+      if (altitudes[i] > maxA) maxA = altitudes[i];
+    }
     return {
-      min: Math.floor(Math.min(...altitudes)),
-      max: Math.ceil(Math.max(...altitudes)),
+      min: Math.floor(minA),
+      max: Math.ceil(maxA),
     };
   }, [crossFiltered.forAltitude]);
 
@@ -667,9 +679,15 @@ export function FlightList({
       .map((f) => f.totalDistance ?? 0)
       .filter((d) => d > 0);
     if (distances.length === 0) return { min: 0, max: 10000 };
+    let minDist = distances[0];
+    let maxDist = distances[0];
+    for (let i = 1; i < distances.length; i++) {
+      if (distances[i] < minDist) minDist = distances[i];
+      if (distances[i] > maxDist) maxDist = distances[i];
+    }
     return {
-      min: Math.floor(Math.min(...distances)),
-      max: Math.ceil(Math.max(...distances)),
+      min: Math.floor(minDist),
+      max: Math.ceil(maxDist),
     };
   }, [crossFiltered.forDistance]);
 

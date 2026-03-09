@@ -2197,8 +2197,14 @@ function computeRange(
   );
   if (cleaned.length === 0) return {};
 
-  let min = Math.min(...cleaned);
-  let max = Math.max(...cleaned);
+  // Use iterative min/max to avoid "Maximum call stack size exceeded"
+  // when spreading large telemetry arrays into Math.min/max arguments.
+  let min = cleaned[0];
+  let max = cleaned[0];
+  for (let i = 1; i < cleaned.length; i++) {
+    if (cleaned[i] < min) min = cleaned[i];
+    if (cleaned[i] > max) max = cleaned[i];
+  }
   if (min === max) {
     const delta = min === 0 ? 1 : Math.abs(min) * 0.1;
     min -= delta;

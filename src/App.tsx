@@ -234,9 +234,9 @@ function InitializationOverlay() {
 
 class AppErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { hasError: boolean; error?: Error }
+  { hasError: boolean; error?: Error; componentStack?: string; copied: boolean }
 > {
-  state = { hasError: false, error: undefined as Error | undefined };
+  state = { hasError: false, error: undefined as Error | undefined, componentStack: undefined as string | undefined, copied: false };
 
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
@@ -244,22 +244,106 @@ class AppErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('App crashed:', error, info);
+    this.setState({ componentStack: info.componentStack ?? undefined });
   }
+
+  /** Build a full, copy-friendly error report string */
+  buildReport(): string {
+    const { error, componentStack } = this.state;
+    const sections: string[] = [];
+    sections.push(`=== Open DroneLog – Error Report ===`);
+    sections.push(`Timestamp: ${new Date().toISOString()}`);
+    sections.push(`User Agent: ${navigator.userAgent}`);
+    if (error) {
+      sections.push(`\n--- Error ---`);
+      sections.push(`${error.name}: ${error.message}`);
+      if (error.stack) {
+        sections.push(`\n--- Stack Trace ---`);
+        sections.push(error.stack);
+      }
+    }
+    if (componentStack) {
+      sections.push(`\n--- Component Stack ---`);
+      sections.push(componentStack.trim());
+    }
+    return sections.join('\n');
+  }
+
+  handleCopy = () => {
+    const report = this.buildReport();
+    navigator.clipboard.writeText(report).then(() => {
+      this.setState({ copied: true });
+      setTimeout(() => this.setState({ copied: false }), 2000);
+    }).catch(() => {
+      // Fallback: select text for manual copy
+      const el = document.getElementById('error-report-pre');
+      if (el) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+    });
+  };
 
   render() {
     if (this.state.hasError) {
+      const report = this.buildReport();
       return (
         <div className="w-full h-full bg-drone-dark text-gray-200 flex items-center justify-center p-6">
-          <div className="max-w-md text-center space-y-3">
-            <h2 className="text-lg font-semibold text-white">{i18n.t('app.errorTitle')}</h2>
+          <div className="max-w-2xl w-full text-center space-y-4">
+            {/* Error icon */}
+            <div className="flex justify-center">
+              <svg className="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+            </div>
+
+            <h2 className="text-xl font-semibold text-white">{i18n.t('app.errorTitle')}</h2>
             <p className="text-sm text-gray-400">
               {i18n.t('app.errorDescription')}
             </p>
-            {this.state.error && (
-              <pre className="text-xs text-gray-500 whitespace-pre-wrap break-words">
-                {this.state.error.message}
+            <p className="text-sm text-amber-400/90">
+              {i18n.t('app.errorContactDev')}
+            </p>
+
+            {/* Scrollable error report */}
+            <div className="relative text-left bg-black/40 border border-gray-700 rounded-lg">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700">
+                <span className="text-xs font-medium text-gray-400">{i18n.t('app.errorReportLabel')}</span>
+                <button
+                  onClick={this.handleCopy}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md transition-colors bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white"
+                >
+                  {this.state.copied ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.5 12.75l6 6 9-13.5" /></svg>
+                      {i18n.t('app.errorCopied')}
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
+                      {i18n.t('app.errorCopyReport')}
+                    </>
+                  )}
+                </button>
+              </div>
+              <pre
+                id="error-report-pre"
+                className="text-[11px] leading-relaxed text-gray-400 whitespace-pre-wrap break-words p-3 max-h-[40vh] overflow-y-auto select-text"
+              >
+                {report}
               </pre>
-            )}
+            </div>
+
+            {/* Restart button */}
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 px-4 py-2 text-sm font-medium rounded-lg bg-drone-primary hover:bg-drone-primary/80 text-white transition-colors"
+            >
+              {i18n.t('app.errorRestart')}
+            </button>
           </div>
         </div>
       );

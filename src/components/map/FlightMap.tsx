@@ -804,8 +804,12 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
 
     if (colorBy === 'height') {
       values = smoothedTrack.map((p) => p[2]);
-      minVal = Math.min(...values);
-      maxVal = Math.max(...values);
+      minVal = values[0] ?? 0;
+      maxVal = values[0] ?? 0;
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < minVal) minVal = values[i];
+        if (values[i] > maxVal) maxVal = values[i];
+      }
     } else if (colorBy === 'speed') {
       // Approximate speed from consecutive point distance
       values = [0];
@@ -816,14 +820,22 @@ export function FlightMap({ track, homeLat, homeLon, durationSecs, telemetry, th
         );
         values.push(d); // proportional to speed (uniform time steps after smoothing)
       }
-      minVal = Math.min(...values);
-      maxVal = Math.max(...values);
+      minVal = values[0] ?? 0;
+      maxVal = values[0] ?? 0;
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < minVal) minVal = values[i];
+        if (values[i] > maxVal) maxVal = values[i];
+      }
     } else if (colorBy === 'distance') {
       const hLat = homeLat ?? smoothedTrack[0]?.[1] ?? 0;
       const hLon = homeLon ?? smoothedTrack[0]?.[0] ?? 0;
       values = smoothedTrack.map((p) => haversineM(hLat, hLon, p[1], p[0]));
-      minVal = Math.min(...values);
-      maxVal = Math.max(...values);
+      minVal = values[0] ?? 0;
+      maxVal = values[0] ?? 0;
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] < minVal) minVal = values[i];
+        if (values[i] > maxVal) maxVal = values[i];
+      }
     }
 
     const range = maxVal - minVal || 1;
