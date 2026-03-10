@@ -446,6 +446,7 @@
     "restoring": "Przywracanie…",
     "deleteAllLogs": "Wyczyść bazę danych projektu",
     "deleteAllWarning": "Ta czynność jest nieodwracalna. Usuwa wszystkie zaimportowane wpisy logów z bazy danych OpenDroneLog bieżącego użytkownika. Oryginalne pliki logów w folderze synchronizacji/na dysku twardym/karcie SD nie są usuwane.",
+    "deleteAllPreserveNote": "Niestandardowe nazwy lotów, notatki, kolory i ręczne tagi zostaną zachowane i automatycznie przywrócone po ponownym zaimportowaniu tych samych plików logów.",
     "removeDuplicates": "Usuń zduplikowane loty",
     "scanningDuplicates": "Skanowanie duplikatów…",
     "clearBlacklist": "Wyczyść czarną listę synchronizacji ({{count}} plik)",

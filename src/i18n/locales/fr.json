@@ -450,6 +450,7 @@
     "restoring": "Restauration…",
     "deleteAllLogs": "Vider la base de données du projet",
     "deleteAllWarning": "Cette action est irréversible. Supprime toutes les entrées de journal importées de la base de données OpenDroneLog de l'utilisateur actuel. Les fichiers journaux originaux dans le dossier de synchronisation/disque dur/carte SD ne sont pas supprimés.",
+    "deleteAllPreserveNote": "Les noms de vol personnalisés, notes, couleurs et étiquettes manuelles seront conservés et automatiquement restaurés lors de la réimportation des mêmes fichiers journaux.",
     "removeDuplicates": "Supprimer les vols en double",
     "scanningDuplicates": "Recherche de doublons…",
     "clearBlacklist": "Effacer la liste noire de sync ({{count}} fichier)",

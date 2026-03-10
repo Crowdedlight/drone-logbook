@@ -141,6 +141,15 @@ The app automatically detects and prevents duplicate imports based on:
 > [!TIP]
 > You can safely re-import files without creating duplicates. The app will skip any flights that already exist in your database.
 
+### Customization Persistence
+
+When you customize a flight (rename, add notes, change color, or add manual tags), those customizations are automatically saved in a persistent overlay keyed by the file's content hash. This means:
+
+- If you delete a flight and re-import the same log file, your custom name, notes, color, and manual tags are automatically restored
+- This works for both individual flight deletion and bulk "Clear Project Database" operations
+- Manual-entry flights (which have no log file) are excluded from this feature
+- Customizations are included in database backups and restored along with them
+
 ### Import Progress
 
 During import, you will see:
@@ -288,7 +297,7 @@ The flight list displays all imported flights with the following information:
 3. Confirm the deletion in the popup
 
 > [!WARNING]
-> Deleted flights cannot be recovered unless you have a database backup.
+> Deleted flights cannot be recovered unless you have a database backup. However, custom flight names, notes, colors, and manual tags are preserved and will be automatically restored if the same log file is re-imported.
 
 ### Context Menu Actions
 
@@ -939,9 +948,9 @@ Required for decrypting V13+ DJI flight logs.
 
 | Action | Description |
 |--------|-------------|
-| **Backup Database** | Export entire database to a `.backup` file (includes all flights, telemetry, tags, and settings) |
+| **Backup Database** | Export entire database to a `.backup` file (includes all flights, telemetry, tags, customizations, and settings) |
 | **Import Backup** | Restore from a previously exported backup file (replaces current database) |
-| **Delete All Logs** | Remove all flight data (requires confirmation) |
+| **Delete All Logs** | Remove all flight data (requires confirmation). Custom names, notes, colors, and manual tags are preserved for re-import. |
 | **Remove Duplicate Flights** | Scan and remove any duplicate entries |
 | **Clear Sync Blacklist** | (Docker only) Reset the list of files excluded from auto-sync |
 

@@ -450,6 +450,7 @@
     "restoring": "Herstellen…",
     "deleteAllLogs": "Projectdatabase wissen",
     "deleteAllWarning": "Deze actie kan niet ongedaan worden gemaakt. Verwijdert alle geïmporteerde logvermeldingen uit de OpenDroneLog-database van de huidige gebruiker. De originele logbestanden in de synchronisatiemap/harde schijf/SD-kaart worden niet verwijderd.",
+    "deleteAllPreserveNote": "Aangepaste vluchtnamen, notities, kleuren en handmatige tags worden bewaard en automatisch hersteld wanneer dezelfde logbestanden opnieuw worden geïmporteerd.",
     "removeDuplicates": "Dubbele vluchten verwijderen",
     "scanningDuplicates": "Scannen op duplicaten…",
     "clearBlacklist": "Synchronisatie-zwartelijst wissen ({{count}} bestand)",

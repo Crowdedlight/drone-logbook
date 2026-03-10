@@ -450,6 +450,7 @@
     "restoring": "復元中…",
     "deleteAllLogs": "プロジェクトデータベースをクリア",
     "deleteAllWarning": "この操作は取り消せません。現在のユーザーのOpenDroneLogデータベースからインポートされたすべてのログエントリを削除します。同期フォルダ/ハードドライブ/SDカード上の元のログファイルは削除されません。",
+    "deleteAllPreserveNote": "カスタムフライト名、メモ、色、手動タグは保持され、同じログファイルを再インポートすると自動的に復元されます。",
     "removeDuplicates": "重複フライトを削除",
     "scanningDuplicates": "重複をスキャン中…",
     "clearBlacklist": "同期ブラックリストをクリア（{{count}} ファイル）",

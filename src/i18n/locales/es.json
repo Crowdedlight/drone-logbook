@@ -450,6 +450,7 @@
     "restoring": "Restaurando…",
     "deleteAllLogs": "Vaciar base de datos del proyecto",
     "deleteAllWarning": "Esta acción no se puede deshacer. Elimina todas las entradas de registro importadas de la base de datos OpenDroneLog del usuario actual. Los archivos de registro originales en la carpeta de sincronización/disco duro/tarjeta SD no se eliminan.",
+    "deleteAllPreserveNote": "Los nombres de vuelo personalizados, notas, colores y etiquetas manuales se conservarán y se restaurarán automáticamente al reimportar los mismos archivos de registro.",
     "removeDuplicates": "Eliminar vuelos duplicados",
     "scanningDuplicates": "Buscando duplicados…",
     "clearBlacklist": "Limpiar lista negra de sincronización ({{count}} archivo)",

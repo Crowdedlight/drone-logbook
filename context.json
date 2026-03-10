@@ -72,6 +72,7 @@
         "Telemetry bulk inserted via DuckDB Appender (column order enforced)",
         "Smart tags generated if enabled (flight characteristics + offline reverse geocoding)",
         "Flight messages (tips/warnings) extracted and stored",
+        "Saved user customizations (display_name, notes, color, manual tags) restored from flight_customizations overlay by file_hash match",
         "On telemetry insert failure, flight metadata is automatically cleaned up"
       ],
       "query": [
@@ -281,16 +282,32 @@
         ]
       },
       "settings": {
-        "description": "Key-value store for app flags (e.g., duplicate_checked)",
+        "description": "Key-value store for app flags (e.g., duplicate_checked, customizations_backfilled)",
         "columns": [
           "key (VARCHAR PK)",
           "value (VARCHAR)",
           "updated_at (TIMESTAMPTZ)"
         ]
+      },
+      "flight_customizations": {
+        "description": "Persistent user-edited metadata overlay keyed by file_hash. Survives delete-all and individual flight deletion + reimport cycles. Write-through: updated on every user edit to display_name, notes, color, or manual tags. On reimport, saved customizations are automatically restored by matching file_hash.",
+        "columns": [
+          "file_hash (VARCHAR PK — SHA256 of original log file)",
+          "display_name (VARCHAR — user-edited flight name)",
+          "notes (VARCHAR — user-edited notes)",
+          "color (VARCHAR — hex color code)",
+          "manual_tags (VARCHAR — JSON array of manual tag strings)",
+          "updated_at (TIMESTAMPTZ)"
+        ],
+        "notes": [
+          "Manual-entry flights (no file_hash) are skipped — no customizations stored",
+          "Backfilled on first startup from existing flights with user-modified data",
+          "Included in backup/restore archives"
+        ]
       }
     },
-    "migrations": "Schema migrations run on startup — add missing columns, type upgrades (DOUBLE→FLOAT), primary key expansions. Non-destructive: never drops existing data.",
-    "backup_format": "Gzip-compressed tar archive of Parquet files (flights, telemetry, flight_tags, keychains, flight_messages, equipment_names). Restore uses upsert semantics."
+    "migrations": "Schema migrations run on startup — add missing columns, type upgrades (DOUBLE→FLOAT), primary key expansions, flight_customizations backfill. Non-destructive: never drops existing data.",
+    "backup_format": "Gzip-compressed tar archive of Parquet files (flights, telemetry, flight_tags, keychains, flight_messages, equipment_names, flight_customizations). Restore uses upsert semantics."
   },
   "features": {
     "import_and_parsing": {
@@ -305,7 +322,8 @@
       "batch_import": "Multi-file selection with per-file progress counter (X of Y), cooldown between files, duplicate skip tracking.",
       "folder_sync": "Web/Docker mode: mount a folder via SYNC_LOGS_PATH, import unprocessed files manually or on a cron schedule (SYNC_INTERVAL).",
       "keep_uploaded_files": "Optional feature to retain copies of log files with SHA256 hash-based filename deduplication. Enabled by default on desktop.",
-      "manual_entry": "Create flight records without log files — collects aircraft, serials, coordinates, duration, optional distance/altitude/notes. Auto-tagged 'Manual Entry'."
+      "manual_entry": "Create flight records without log files — collects aircraft, serials, coordinates, duration, optional distance/altitude/notes. Auto-tagged 'Manual Entry'.",
+      "customization_persistence": "User-edited flight names, notes, colors, and manual tags are persisted in a flight_customizations overlay table keyed by file_hash (SHA256). On delete + reimport (individual or bulk), customizations are automatically restored. Write-through on every edit. One-time backfill migration captures existing data on upgrade. Manual-entry flights (no file_hash) are excluded."
     },
     "profiles": {
       "description": "Multiple named profiles with isolated databases, config, uploads, and sync folders. Managed from the profile selector dropdown.",
@@ -466,9 +484,10 @@
         "flight_tags.parquet",
         "keychains.parquet",
         "flight_messages.parquet",
-        "equipment_names.parquet"
+        "equipment_names.parquet",
+        "flight_customizations.parquet"
       ],
-      "restore": "Upsert semantics (delete-then-insert for flights/telemetry, INSERT OR REPLACE for keychains)."
+      "restore": "Upsert semantics (delete-then-insert for flights/telemetry, INSERT OR REPLACE for keychains, equipment_names, and flight_customizations)."
     },
     "settings": {
       "preferences": [

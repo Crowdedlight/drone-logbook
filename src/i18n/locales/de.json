@@ -450,6 +450,7 @@
     "restoring": "Wiederherstellen…",
     "deleteAllLogs": "Projektdatenbank leeren",
     "deleteAllWarning": "Diese Aktion kann nicht rückgängig gemacht werden. Löscht alle importierten Logeinträge aus der OpenDroneLog-Datenbank des aktuellen Benutzers. Die originalen Logdateien im Sync-Ordner/auf der Festplatte/SD-Karte werden nicht gelöscht.",
+    "deleteAllPreserveNote": "Benutzerdefinierte Flugnamen, Notizen, Farben und manuelle Tags werden beibehalten und beim erneuten Import derselben Logdateien automatisch wiederhergestellt.",
     "removeDuplicates": "Doppelte Flüge entfernen",
     "scanningDuplicates": "Suche nach Duplikaten…",
     "clearBlacklist": "Sync-Blacklist löschen ({{count}} Datei)",

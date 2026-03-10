@@ -450,6 +450,7 @@
     "restoring": "Ripristino…",
     "deleteAllLogs": "Svuota database del progetto",
     "deleteAllWarning": "Questa azione non può essere annullata. Elimina tutte le voci di registro importate dal database OpenDroneLog dell'utente corrente. I file di registro originali nella cartella di sincronizzazione/disco rigido/scheda SD non vengono eliminati.",
+    "deleteAllPreserveNote": "I nomi di volo personalizzati, le note, i colori e i tag manuali verranno conservati e ripristinati automaticamente quando gli stessi file di registro vengono reimportati.",
     "removeDuplicates": "Rimuovi voli duplicati",
     "scanningDuplicates": "Ricerca duplicati…",
     "clearBlacklist": "Cancella lista nera sincronizzazione ({{count}} file)",

@@ -402,6 +402,13 @@ mod tauri_app {
             }
         }
 
+        // Restore any previously saved user customizations (display_name, notes, color, manual tags)
+        if let Some(ref hash) = parse_result.metadata.file_hash {
+            if let Err(e) = db.apply_saved_customizations(flight_id, hash) {
+                log::warn!("Failed to restore customizations for flight {}: {}", flight_id, e);
+            }
+        }
+
         log::info!(
             "Successfully imported flight {} with {} points in {:.1}s",
             flight_id,

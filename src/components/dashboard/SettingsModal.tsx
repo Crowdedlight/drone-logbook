@@ -1203,6 +1203,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     <p className="text-xs text-red-200">
                       {t('settings.deleteAllWarning')}
                     </p>
+                    <p className="text-xs text-green-300 mt-1.5">
+                      {t('settings.deleteAllPreserveNote')}
+                    </p>
                     <div className="mt-2 flex items-center gap-3">
                       <button
                         onClick={handleDeleteAll}

@@ -91,6 +91,9 @@ impl Database {
         // Run one-time startup deduplication for existing data
         db.run_startup_deduplication();
 
+        // Backfill flight_customizations for existing user-edited flights
+        db.backfill_flight_customizations();
+
         // Perform a checkpoint right after startup, as migrations (especially those touching thousands of rows)
         // create large WAL files. This ensures the 100+ MB WAL isn't held in memory until the user
         // closes the app window, which prevents process locking issues.
@@ -339,6 +342,19 @@ impl Database {
 
             CREATE INDEX IF NOT EXISTS idx_flight_messages_flight 
                 ON flight_messages(flight_id);
+
+            -- ============================================================
+            -- FLIGHT_CUSTOMIZATIONS TABLE: Persistent user edits keyed by file_hash
+            -- Survives delete-all / individual delete + reimport cycles
+            -- ============================================================
+            CREATE TABLE IF NOT EXISTS flight_customizations (
+                file_hash       VARCHAR PRIMARY KEY,
+                display_name    VARCHAR,
+                notes           VARCHAR,
+                color           VARCHAR,
+                manual_tags     VARCHAR,                 -- JSON array of manual tag strings
+                updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
             "#,
         )?;
 
@@ -1717,7 +1733,7 @@ impl Database {
         })
     }
 
-    /// Update the display name for a flight
+    /// Update the display name for a flight and persist to customizations overlay
     pub fn update_flight_name(&self, flight_id: i64, display_name: &str) -> Result<(), DatabaseError> {
         let conn = self.conn.lock().unwrap();
 
@@ -1725,12 +1741,14 @@ impl Database {
             "UPDATE flights SET display_name = ? WHERE id = ?",
             params![display_name, flight_id],
         )?;
+        // Write-through to customizations overlay (keyed by file_hash)
+        Self::save_customization_field(&conn, flight_id, "display_name", Some(display_name))?;
 
         log::debug!("Updated flight {} display name to '{}'", flight_id, display_name);
         Ok(())
     }
 
-    /// Update the notes for a flight
+    /// Update the notes for a flight and persist to customizations overlay
     pub fn update_flight_notes(&self, flight_id: i64, notes: Option<&str>) -> Result<(), DatabaseError> {
         let conn = self.conn.lock().unwrap();
 
@@ -1738,12 +1756,14 @@ impl Database {
             "UPDATE flights SET notes = ? WHERE id = ?",
             params![notes, flight_id],
         )?;
+        // Write-through to customizations overlay (keyed by file_hash)
+        Self::save_customization_field(&conn, flight_id, "notes", notes)?;
 
         log::debug!("Updated flight {} notes", flight_id);
         Ok(())
     }
 
-    /// Update the color label for a flight
+    /// Update the color label for a flight and persist to customizations overlay
     pub fn update_flight_color(&self, flight_id: i64, color: &str) -> Result<(), DatabaseError> {
         let conn = self.conn.lock().unwrap();
 
@@ -1751,6 +1771,8 @@ impl Database {
             "UPDATE flights SET color = ? WHERE id = ?",
             params![color, flight_id],
         )?;
+        // Write-through to customizations overlay (keyed by file_hash)
+        Self::save_customization_field(&conn, flight_id, "color", Some(color))?;
 
         log::debug!("Updated flight {} color to '{}'", flight_id, color);
         Ok(())
@@ -1798,7 +1820,7 @@ impl Database {
         Ok(tags)
     }
 
-    /// Add a single tag to a flight (manual user-added tag)
+    /// Add a single tag to a flight (manual user-added tag) and sync to customizations overlay
     pub fn add_flight_tag(&self, flight_id: i64, tag: &str) -> Result<(), DatabaseError> {
         let trimmed = tag.trim();
         if trimmed.is_empty() {
@@ -1809,17 +1831,21 @@ impl Database {
             "INSERT OR IGNORE INTO flight_tags (flight_id, tag, tag_type) VALUES (?, ?, 'manual')",
             params![flight_id, trimmed],
         )?;
+        // Sync manual tags to customizations overlay
+        Self::sync_manual_tags_to_customizations(&conn, flight_id)?;
         log::debug!("Added manual tag '{}' to flight {}", trimmed, flight_id);
         Ok(())
     }
 
-    /// Remove a single tag from a flight
+    /// Remove a single tag from a flight and sync to customizations overlay
     pub fn remove_flight_tag(&self, flight_id: i64, tag: &str) -> Result<(), DatabaseError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
             "DELETE FROM flight_tags WHERE flight_id = ? AND tag = ?",
             params![flight_id, tag.trim()],
         )?;
+        // Sync manual tags to customizations overlay
+        Self::sync_manual_tags_to_customizations(&conn, flight_id)?;
         log::debug!("Removed tag '{}' from flight {}", tag, flight_id);
         Ok(())
     }
@@ -1927,6 +1953,169 @@ impl Database {
             params![flight_id],
         )?;
         Ok(())
+    }
+
+    // ========================================================================
+    // FLIGHT CUSTOMIZATIONS OVERLAY
+    // Persists user-edited metadata (display_name, notes, color, manual_tags)
+    // keyed by file_hash so they survive delete + reimport cycles.
+    // ========================================================================
+
+    /// Save a single customization field for a flight (looked up by file_hash).
+    /// Skips flights without a file_hash (e.g. manual entries).
+    fn save_customization_field(
+        conn: &Connection,
+        flight_id: i64,
+        field: &str,
+        value: Option<&str>,
+    ) -> Result<(), DatabaseError> {
+        // Look up the file_hash for this flight
+        let file_hash: Option<String> = conn
+            .query_row(
+                "SELECT file_hash FROM flights WHERE id = ?",
+                params![flight_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .flatten();
+
+        let hash = match file_hash {
+            Some(h) if !h.is_empty() => h,
+            _ => return Ok(()), // Manual entry — skip
+        };
+
+        // Ensure a row exists for this file_hash
+        conn.execute(
+            "INSERT OR IGNORE INTO flight_customizations (file_hash) VALUES (?)",
+            params![hash],
+        )?;
+        // Update the specific field
+        let sql = format!(
+            "UPDATE flight_customizations SET {} = ?, updated_at = CURRENT_TIMESTAMP WHERE file_hash = ?",
+            field
+        );
+        conn.execute(&sql, params![value, hash])?;
+        Ok(())
+    }
+
+    /// Sync the current set of manual tags for a flight into the customizations overlay.
+    fn sync_manual_tags_to_customizations(
+        conn: &Connection,
+        flight_id: i64,
+    ) -> Result<(), DatabaseError> {
+        // Look up the file_hash for this flight
+        let file_hash: Option<String> = conn
+            .query_row(
+                "SELECT file_hash FROM flights WHERE id = ?",
+                params![flight_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .flatten();
+
+        let hash = match file_hash {
+            Some(h) if !h.is_empty() => h,
+            _ => return Ok(()), // Manual entry — skip
+        };
+
+        // Collect current manual tags
+        let mut stmt = conn.prepare(
+            "SELECT tag FROM flight_tags WHERE flight_id = ? AND tag_type = 'manual' ORDER BY tag",
+        )?;
+        let tags: Vec<String> = stmt
+            .query_map(params![flight_id], |row| row.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let tags_json = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".to_string());
+
+        conn.execute(
+            "INSERT OR IGNORE INTO flight_customizations (file_hash) VALUES (?)",
+            params![hash],
+        )?;
+        conn.execute(
+            "UPDATE flight_customizations SET manual_tags = ?, updated_at = CURRENT_TIMESTAMP WHERE file_hash = ?",
+            params![tags_json, hash],
+        )?;
+        Ok(())
+    }
+
+    /// Look up saved customizations for a file_hash.
+    /// Returns (display_name, notes, color, manual_tags_json) if found.
+    pub fn get_flight_customizations(
+        &self,
+        file_hash: &str,
+    ) -> Result<Option<(Option<String>, Option<String>, Option<String>, Option<String>)>, DatabaseError> {
+        let conn = self.conn.lock().unwrap();
+        let result = conn
+            .query_row(
+                "SELECT display_name, notes, color, manual_tags FROM flight_customizations WHERE file_hash = ?",
+                params![file_hash],
+                |row| {
+                    Ok((
+                        row.get::<_, Option<String>>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                    ))
+                },
+            )
+            .optional()?;
+        Ok(result)
+    }
+
+    /// Apply any previously saved customizations to a newly imported flight.
+    /// Restores display_name, notes, color, and manual tags from the overlay table.
+    /// Returns true if customizations were applied, false otherwise.
+    pub fn apply_saved_customizations(&self, flight_id: i64, file_hash: &str) -> Result<bool, DatabaseError> {
+        let customizations = self.get_flight_customizations(file_hash)?;
+        let (display_name, notes, color, manual_tags_json) = match customizations {
+            Some(c) => c,
+            None => return Ok(false),
+        };
+
+        let conn = self.conn.lock().unwrap();
+
+        if let Some(ref name) = display_name {
+            conn.execute(
+                "UPDATE flights SET display_name = ? WHERE id = ?",
+                params![name, flight_id],
+            )?;
+        }
+        if let Some(ref n) = notes {
+            conn.execute(
+                "UPDATE flights SET notes = ? WHERE id = ?",
+                params![n, flight_id],
+            )?;
+        }
+        if let Some(ref c) = color {
+            conn.execute(
+                "UPDATE flights SET color = ? WHERE id = ?",
+                params![c, flight_id],
+            )?;
+        }
+        if let Some(ref tags_json) = manual_tags_json {
+            if let Ok(tags) = serde_json::from_str::<Vec<String>>(tags_json) {
+                for tag in &tags {
+                    let trimmed = tag.trim();
+                    if !trimmed.is_empty() {
+                        conn.execute(
+                            "INSERT OR IGNORE INTO flight_tags (flight_id, tag, tag_type) VALUES (?, ?, 'manual')",
+                            params![flight_id, trimmed],
+                        )?;
+                    }
+                }
+            }
+        }
+
+        let had_customizations = display_name.is_some()
+            || notes.is_some()
+            || color.is_some()
+            || manual_tags_json.is_some();
+
+        if had_customizations {
+            log::info!("Restored saved customizations for flight {} (file_hash: {})", flight_id, file_hash);
+        }
+        Ok(had_customizations)
     }
 
     // ========================================================================
@@ -2228,6 +2417,121 @@ impl Database {
         }
     }
 
+    /// One-time migration: backfill the `flight_customizations` table with
+    /// existing user-modified data (display_name, notes, color, manual tags)
+    /// so that flights customized before this feature was added are also
+    /// preserved across delete + reimport cycles.
+    fn backfill_flight_customizations(&self) {
+        const SETTING_KEY: &str = "customizations_backfilled";
+
+        match self.get_setting(SETTING_KEY) {
+            Ok(Some(value)) if value == "true" => {
+                log::debug!("Flight customizations backfill already completed, skipping");
+                return;
+            }
+            Ok(_) => {}
+            Err(e) => {
+                log::warn!("Failed to check customizations backfill setting: {}, proceeding", e);
+            }
+        }
+
+        log::info!("Backfilling flight_customizations from existing flights...");
+
+        let conn = self.conn.lock().unwrap();
+
+        // Backfill flights that have user-modified display_name, notes, or non-default color.
+        // A flight has a modified display_name if it differs from the file stem (file_name without extension).
+        // We only consider flights that have a file_hash (skip manual entries).
+        let result = conn.execute_batch(
+            r#"
+            INSERT OR IGNORE INTO flight_customizations (file_hash, display_name, notes, color, updated_at)
+            SELECT
+                f.file_hash,
+                CASE WHEN f.display_name != regexp_replace(f.file_name, '\.[^.]+$', '') THEN f.display_name ELSE NULL END,
+                f.notes,
+                CASE WHEN f.color != '#7dd3fc' THEN f.color ELSE NULL END,
+                CURRENT_TIMESTAMP
+            FROM flights f
+            WHERE f.file_hash IS NOT NULL
+              AND f.file_hash != ''
+              AND (
+                  f.display_name != regexp_replace(f.file_name, '\.[^.]+$', '')
+                  OR f.notes IS NOT NULL
+                  OR (f.color IS NOT NULL AND f.color != '#7dd3fc')
+              );
+            "#,
+        );
+
+        if let Err(e) = result {
+            log::error!("Failed to backfill flight customizations (display_name/notes/color): {}", e);
+            return;
+        }
+
+        // Backfill manual tags: for each flight with manual tags and a file_hash,
+        // collect the tags as a JSON array and update the customizations row.
+        // First ensure rows exist, then update.
+        let tag_result = conn.execute_batch(
+            r#"
+            INSERT OR IGNORE INTO flight_customizations (file_hash)
+            SELECT DISTINCT f.file_hash
+            FROM flight_tags ft
+            JOIN flights f ON f.id = ft.flight_id
+            WHERE ft.tag_type = 'manual'
+              AND f.file_hash IS NOT NULL
+              AND f.file_hash != '';
+
+            UPDATE flight_customizations SET
+                manual_tags = sub.tags_json,
+                updated_at = CURRENT_TIMESTAMP
+            FROM (
+                SELECT
+                    f.file_hash AS fh,
+                    '["' || string_agg(ft.tag, '","' ORDER BY ft.tag) || '"]' AS tags_json
+                FROM flight_tags ft
+                JOIN flights f ON f.id = ft.flight_id
+                WHERE ft.tag_type = 'manual'
+                  AND f.file_hash IS NOT NULL
+                  AND f.file_hash != ''
+                GROUP BY f.file_hash
+            ) AS sub
+            WHERE flight_customizations.file_hash = sub.fh;
+            "#,
+        );
+
+        if let Err(e) = tag_result {
+            log::error!("Failed to backfill flight customizations (manual_tags): {}", e);
+            return;
+        }
+
+        // Remove rows where all customization fields are NULL (no actual changes)
+        let _ = conn.execute_batch(
+            r#"
+            DELETE FROM flight_customizations
+            WHERE display_name IS NULL
+              AND notes IS NULL
+              AND color IS NULL
+              AND manual_tags IS NULL;
+            "#,
+        );
+
+        drop(conn);
+
+        // Count how many were backfilled
+        if let Ok(conn) = self.conn.lock() {
+            if let Ok(count) = conn.query_row(
+                "SELECT COUNT(*) FROM flight_customizations",
+                [],
+                |row| row.get::<_, i64>(0),
+            ) {
+                log::info!("Flight customizations backfill complete: {} entries", count);
+            }
+        }
+
+        if let Err(e) = self.set_setting(SETTING_KEY, "true") {
+            log::error!("Failed to save customizations backfill flag: {}", e);
+        }
+    }
+
     /// Export the entire database to a compressed backup file.
     ///
     /// Uses DuckDB's Parquet COPY for each table, then packs them into a single
@@ -2250,6 +2554,7 @@ impl Database {
         let tags_path = temp_dir.join("flight_tags.parquet");
         let messages_path = temp_dir.join("flight_messages.parquet");
         let equipment_names_path = temp_dir.join("equipment_names.parquet");
+        let customizations_path = temp_dir.join("flight_customizations.parquet");
 
         conn.execute_batch(&format!(
             "COPY flights    TO '{}' (FORMAT PARQUET, COMPRESSION ZSTD);",
@@ -2278,6 +2583,11 @@ impl Database {
             "COPY equipment_names TO '{}' (FORMAT PARQUET, COMPRESSION ZSTD);",
             equipment_names_path.to_string_lossy()
         ));
+        // Export flight_customizations table (ignore error if empty or doesn't exist)
+        let _ = conn.execute_batch(&format!(
+            "COPY flight_customizations TO '{}' (FORMAT PARQUET, COMPRESSION ZSTD);",
+            customizations_path.to_string_lossy()
+        ));
 
         drop(conn); // release the lock while we tar
 
@@ -2286,7 +2596,7 @@ impl Database {
         let gz = flate2::write::GzEncoder::new(dest_file, flate2::Compression::fast());
         let mut tar = tar::Builder::new(gz);
 
-        for name in &["flights.parquet", "telemetry.parquet", "keychains.parquet", "flight_tags.parquet", "flight_messages.parquet", "equipment_names.parquet"] {
+        for name in &["flights.parquet", "telemetry.parquet", "keychains.parquet", "flight_tags.parquet", "flight_messages.parquet", "equipment_names.parquet", "flight_customizations.parquet"] {
             let file_path = temp_dir.join(name);
             if file_path.exists() {
                 tar.append_path_with_name(&file_path, name)
@@ -2436,6 +2746,18 @@ impl Database {
                 SELECT * FROM read_parquet('{}');
                 "#,
                 equipment_names_path.to_string_lossy()
+            ));
+        }
+
+        // --- Restore flight customizations (backward compatible — may not exist in old backups) ---
+        let customizations_path = temp_dir.join("flight_customizations.parquet");
+        if customizations_path.exists() {
+            let _ = conn.execute_batch(&format!(
+                r#"
+                INSERT OR REPLACE INTO flight_customizations
+                SELECT * FROM read_parquet('{}');
+                "#,
+                customizations_path.to_string_lossy()
             ));
         }
 
