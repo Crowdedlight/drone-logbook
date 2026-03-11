@@ -722,5 +722,19 @@
     "login": "로그인",
     "locked": "비밀번호 보호",
     "logout": "로그아웃"
+  },
+  "signature": {
+    "title": "이메일 서명",
+    "getSignature": "서명 생성",
+    "accentColor": "강조 색상",
+    "dronePilot": "드론 파일럿",
+    "flights": "비행",
+    "hours": "시간",
+    "poweredBy": "제공",
+    "cancel": "취소",
+    "copyHtml": "이메일 서명 복사",
+    "copied": "복사됨!",
+    "downloadPng": "PNG 다운로드",
+    "saving": "저장 중..."
   }
 }

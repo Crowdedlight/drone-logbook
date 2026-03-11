@@ -724,5 +724,19 @@
     "login": "登录",
     "locked": "密码保护",
     "logout": "退出登录"
+  },
+  "signature": {
+    "title": "邮件签名",
+    "getSignature": "获取签名",
+    "accentColor": "强调色",
+    "dronePilot": "无人机飞行员",
+    "flights": "飞行次数",
+    "hours": "小时",
+    "poweredBy": "技术支持",
+    "cancel": "取消",
+    "copyHtml": "复制邮件签名",
+    "copied": "已复制！",
+    "downloadPng": "下载PNG",
+    "saving": "保存中..."
   }
 }

@@ -724,5 +724,19 @@
     "login": "Inloggen",
     "locked": "Beveiligd met wachtwoord",
     "logout": "Uitloggen"
+  },
+  "signature": {
+    "title": "E-mailhandtekening",
+    "getSignature": "Handtekening ophalen",
+    "accentColor": "Accentkleur",
+    "dronePilot": "DRONEPILOOT",
+    "flights": "Vluchten",
+    "hours": "Uren",
+    "poweredBy": "Aangedreven door",
+    "cancel": "Annuleren",
+    "copyHtml": "E-mailhandtekening kopiëren",
+    "copied": "Gekopieerd!",
+    "downloadPng": "PNG downloaden",
+    "saving": "Opslaan..."
   }
 }

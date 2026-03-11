@@ -724,5 +724,19 @@
     "login": "Iniciar sesión",
     "locked": "Protegido con contraseña",
     "logout": "Cerrar sesión"
+  },
+  "signature": {
+    "title": "Firma de correo",
+    "getSignature": "Obtener firma",
+    "accentColor": "Color de acento",
+    "dronePilot": "PILOTO DE DRON",
+    "flights": "Vuelos",
+    "hours": "Horas",
+    "poweredBy": "Desarrollado por",
+    "cancel": "Cancelar",
+    "copyHtml": "Copiar firma de correo",
+    "copied": "¡Copiado!",
+    "downloadPng": "Descargar PNG",
+    "saving": "Guardando..."
   }
 }

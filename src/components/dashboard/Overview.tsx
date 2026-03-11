@@ -25,6 +25,7 @@ import {
 } from '@/lib/utils';
 import { useFlightStore } from '@/stores/flightStore';
 import { FlightClusterMap } from './FlightClusterMap';
+import { EmailSignatureModal } from './EmailSignatureModal';
 
 function resolveThemeMode(mode: 'system' | 'dark' | 'light'): 'dark' | 'light' {
   if (mode === 'system') {
@@ -69,6 +70,7 @@ export function Overview({ stats, flights, unitSystem, onSelectFlight }: Overvie
   const performMaintenance = useFlightStore((state) => state.performMaintenance);
   const donationAcknowledged = useFlightStore((state) => state.donationAcknowledged);
   const resolvedTheme = useMemo(() => resolveThemeMode(themeMode), [themeMode]);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
 
   // Use sidebar-filtered flights (fall back to all flights if no filter set yet)
   const filteredFlights = useMemo(() => {
@@ -268,7 +270,7 @@ export function Overview({ stats, flights, unitSystem, onSelectFlight }: Overvie
   return (
     <div className="w-full min-w-0 md:min-w-[700px] lg:min-w-[1100px] px-4 pt-4 pb-24 space-y-5">
       {/* Pilot Milestone Timeline */}
-      <PilotMilestoneTimeline totalHours={filteredStats.totalDurationSecs / 3600} />
+      <PilotMilestoneTimeline totalHours={filteredStats.totalDurationSecs / 3600} onGetSignature={() => setShowSignatureModal(true)} />
 
       {/* Primary Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
@@ -487,6 +489,32 @@ export function Overview({ stats, flights, unitSystem, onSelectFlight }: Overvie
       />
 
       {/* Donation Note */}
+      {/* Email Signature Modal */}
+      {showSignatureModal && (
+        <EmailSignatureModal
+          totalFlights={filteredStats.totalFlights}
+          totalDurationSecs={filteredStats.totalDurationSecs}
+          totalPhotos={filteredStats.totalPhotos}
+          totalVideos={filteredStats.totalVideos}
+          currentRank={(() => {
+            const hrs = filteredStats.totalDurationSecs / 3600;
+            const RANKS = [
+              { hours: 0, label: 'Beginner' },
+              { hours: 5, label: 'Novice' },
+              { hours: 20, label: 'Intermediate' },
+              { hours: 50, label: 'Advanced' },
+              { hours: 100, label: 'Expert' },
+              { hours: 200, label: 'Legendary' },
+            ];
+            for (let i = RANKS.length - 1; i >= 0; i--) {
+              if (hrs >= RANKS[i].hours) return t(`overview.${RANKS[i].label.toLowerCase()}`);
+            }
+            return t('overview.beginner');
+          })()}
+          onClose={() => setShowSignatureModal(false)}
+        />
+      )}
+
       {!donationAcknowledged && (
       <div className="mt-6 mb-2 mx-auto max-w-4xl rounded-lg border border-gray-200 dark:border-gray-700/50 bg-gray-50 dark:bg-white/[0.03] px-5 py-4 sm:px-8">
         <p className="text-center text-xs leading-relaxed text-gray-500 dark:text-gray-500 sm:text-sm">
@@ -595,7 +623,7 @@ const MILESTONES = [
   { hours: 200, label: 'Legendary', icon: MilestoneIconLegendary, description: 'Master of the skies' },
 ];
 
-function PilotMilestoneTimeline({ totalHours }: { totalHours: number }) {
+function PilotMilestoneTimeline({ totalHours, onGetSignature }: { totalHours: number; onGetSignature?: () => void }) {
   const { t } = useTranslation();
   // Calculate current milestone index and progress within segment
   const currentMilestoneIndex = useMemo(() => {
@@ -695,16 +723,31 @@ function PilotMilestoneTimeline({ totalHours }: { totalHours: number }) {
           </div>
         </div>
 
-        {/* Next milestone info */}
-        <div className="flex-shrink-0 text-right hidden sm:block">
-          {nextMilestone ? (
-            <div className="text-xs">
-              <span className="text-white font-medium">{t('overview.nextRank', { label: t(`overview.${nextMilestone.label.toLowerCase()}`), time: formatHours(nextMilestone.hours - totalHours) })}</span>
-            </div>
-          ) : (
-            <div className="text-xs text-amber-400 font-medium">{t('overview.maxRank')}</div>
+        {/* Next milestone info + Get Signature button */}
+        <div className="flex-shrink-0 text-right hidden sm:flex sm:items-center sm:gap-3">
+          <div>
+            {nextMilestone ? (
+              <div className="text-xs">
+                <span className="text-white font-medium">{t('overview.nextRank', { label: t(`overview.${nextMilestone.label.toLowerCase()}`), time: formatHours(nextMilestone.hours - totalHours) })}</span>
+              </div>
+            ) : (
+              <div className="text-xs text-amber-400 font-medium">{t('overview.maxRank')}</div>
+            )}
+            <div className="text-sm font-bold text-white">{t('overview.hoursFlown', { hours: formatHours(totalHours) })}</div>
+          </div>
+          {onGetSignature && (
+            <button
+              type="button"
+              onClick={onGetSignature}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-drone-primary/15 text-drone-primary hover:bg-drone-primary/25 border border-drone-primary/30 hover:border-drone-primary/50 transition-all"
+              title={t('signature.title')}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              {t('signature.getSignature')}
+            </button>
           )}
-          <div className="text-sm font-bold text-white">{t('overview.hoursFlown', { hours: formatHours(totalHours) })}</div>
         </div>
       </div>
     </div>

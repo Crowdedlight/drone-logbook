@@ -727,5 +727,19 @@
     "login": "Log in",
     "locked": "Password protected",
     "logout": "Log out"
+  },
+  "signature": {
+    "title": "Email Signature",
+    "getSignature": "Get Signature",
+    "accentColor": "Accent Color",
+    "dronePilot": "DRONE PILOT",
+    "flights": "Flights",
+    "hours": "Hours",
+    "poweredBy": "Powered by",
+    "cancel": "Cancel",
+    "copyHtml": "Copy Email Signature",
+    "copied": "Copied!",
+    "downloadPng": "Download PNG",
+    "saving": "Saving..."
   }
 }

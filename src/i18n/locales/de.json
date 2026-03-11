@@ -724,5 +724,19 @@
     "login": "Anmelden",
     "locked": "Passwortgeschützt",
     "logout": "Abmelden"
+  },
+  "signature": {
+    "title": "E-Mail-Signatur",
+    "getSignature": "Signatur erstellen",
+    "accentColor": "Akzentfarbe",
+    "dronePilot": "DROHNENPILOT",
+    "flights": "Flüge",
+    "hours": "Stunden",
+    "poweredBy": "Betrieben von",
+    "cancel": "Abbrechen",
+    "copyHtml": "E-Mail-Signatur kopieren",
+    "copied": "Kopiert!",
+    "downloadPng": "PNG herunterladen",
+    "saving": "Speichern..."
   }
 }

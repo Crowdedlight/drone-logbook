@@ -724,5 +724,19 @@
     "login": "ログイン",
     "locked": "パスワード保護",
     "logout": "ログアウト"
+  },
+  "signature": {
+    "title": "メール署名",
+    "getSignature": "署名を取得",
+    "accentColor": "アクセントカラー",
+    "dronePilot": "ドローンパイロット",
+    "flights": "フライト",
+    "hours": "時間",
+    "poweredBy": "提供元",
+    "cancel": "キャンセル",
+    "copyHtml": "メール署名をコピー",
+    "copied": "コピーしました！",
+    "downloadPng": "PNGをダウンロード",
+    "saving": "保存中..."
   }
 }
