@@ -40,6 +40,8 @@
     "loadingFlightData": "フライトデータを読み込み中...",
     "noOverviewData": "概要データがまだありません。",
     "telemetryData": "テレメトリーデータ",
+    "collapsePanel": "パネルを閉じる",
+    "expandPanel": "パネルを展開する",
     "dragToExpand": "右にドラッグして展開",
     "flightPath": "フライト経路",
     "dragToResize": "ドラッグしてリサイズ。左に引いてテレメトリーパネルを閉じます。",

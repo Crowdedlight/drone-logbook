@@ -54,6 +54,7 @@ export function Dashboard() {
   const [mainSplit, setMainSplit] = useState(50);
   // Track if telemetry panel is collapsed (slider pulled past minimum width)
   const [isTelemetryCollapsed, setIsTelemetryCollapsed] = useState(false);
+  const [preCollapseSplit, setPreCollapseSplit] = useState<number | null>(null);
   // Width of telemetry panel when collapsed (minimum visible width)
   const TELEMETRY_MIN_VISIBLE_WIDTH = 40;
   const TELEMETRY_MIN_NORMAL_WIDTH = 720;
@@ -514,13 +515,53 @@ export function Dashboard() {
                       flexShrink: 0,
                     }}
                   >
-                    <div className="p-3 border-b border-gray-700 flex items-center justify-between">
-                      <h2 className="font-semibold text-white">
-                        {t('dashboard.telemetryData')}
-                      </h2>
-                      {isTelemetryCollapsed && (
-                        <span className="text-xs text-gray-500 ml-2">{t('dashboard.dragToExpand')}</span>
+                    <div className={`border-b border-gray-700 flex items-center ${isTelemetryCollapsed ? 'justify-center p-2' : 'justify-between p-3'}`}>
+                      {!isTelemetryCollapsed && (
+                        <div className="flex items-center gap-2">
+                          <h2 className="font-semibold text-white">
+                            {t('dashboard.telemetryData')}
+                          </h2>
+                        </div>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const container = document.getElementById('main-panels');
+                          if (!container) return;
+                          const rect = container.getBoundingClientRect();
+
+                          if (!isTelemetryCollapsed) {
+                            // Collapse it
+                            setPreCollapseSplit(mainSplit);
+                            setIsTelemetryCollapsed(true);
+                            // Set to minimum visible width percentage
+                            const minLeftPercent = (TELEMETRY_MIN_VISIBLE_WIDTH / rect.width) * 100;
+                            setMainSplit(minLeftPercent);
+                          } else {
+                            // Expand it
+                            setIsTelemetryCollapsed(false);
+                            // Restore previous split or default to 50%
+                            const minNormalPercent = (TELEMETRY_MIN_NORMAL_WIDTH / rect.width) * 100;
+                            if (preCollapseSplit !== null && preCollapseSplit > minNormalPercent) {
+                              setMainSplit(preCollapseSplit);
+                            } else {
+                              setMainSplit(50);
+                            }
+                          }
+                        }}
+                        className={`rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/60 transition-colors ${isTelemetryCollapsed ? 'p-1' : 'p-1.5'}`}
+                        title={isTelemetryCollapsed ? t('dashboard.expandPanel') : t('dashboard.collapsePanel')}
+                        aria-label={isTelemetryCollapsed ? t('dashboard.expandPanel') : t('dashboard.collapsePanel')}
+                      >
+                        <svg
+                          className={`transition-transform duration-200 ${isTelemetryCollapsed ? 'w-4 h-4' : 'w-5 h-5'} ${isTelemetryCollapsed ? 'rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
                     </div>
                     {/* Inner container that maintains minimum width for content */}
                     <div className="flex-1 overflow-x-auto p-2">

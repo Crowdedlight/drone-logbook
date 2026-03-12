@@ -40,6 +40,8 @@
     "loadingFlightData": "正在加载飞行数据...",
     "noOverviewData": "暂无概览数据。",
     "telemetryData": "遥测数据",
+    "collapsePanel": "收起面板",
+    "expandPanel": "展开面板",
     "dragToExpand": "向右拖动以展开",
     "flightPath": "飞行路径",
     "dragToResize": "拖动以调整大小。向左拉动以折叠遥测面板。",

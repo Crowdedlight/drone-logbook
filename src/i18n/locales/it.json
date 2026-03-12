@@ -40,6 +40,8 @@
     "loadingFlightData": "Caricamento dati di volo...",
     "noOverviewData": "Nessun dato di panoramica ancora.",
     "telemetryData": "Dati Telemetrici",
+    "collapsePanel": "Riduci pannello",
+    "expandPanel": "Espandi pannello",
     "dragToExpand": "Trascina a destra per espandere",
     "flightPath": "Percorso di Volo",
     "dragToResize": "Trascina per ridimensionare. Tira a sinistra per comprimere il pannello telemetria.",

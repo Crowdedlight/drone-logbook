@@ -40,6 +40,8 @@
     "loadingFlightData": "Flugdaten werden geladen...",
     "noOverviewData": "Noch keine Übersichtsdaten.",
     "telemetryData": "Telemetriedaten",
+    "collapsePanel": "Panel einklappen",
+    "expandPanel": "Panel ausklappen",
     "dragToExpand": "Nach rechts ziehen zum Erweitern",
     "flightPath": "Flugroute",
     "dragToResize": "Zum Ändern der Größe ziehen. Nach links ziehen, um das Telemetrie-Panel zu schließen.",
