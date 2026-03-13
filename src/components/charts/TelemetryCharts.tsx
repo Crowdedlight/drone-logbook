@@ -378,9 +378,9 @@ interface TelemetryChartsConfig {
 
 /** Default configuration for all charts */
 const DEFAULT_CHART_CONFIGS: TelemetryChartsConfig = {
-  altitudeSpeed: { title: null, selectedFields: ['height', 'vpsHeight', 'speed'] },
-  battery: { title: null, selectedFields: ['battery', 'batteryVoltage', 'batteryTemp'] },
-  cellVoltage: { title: null, selectedFields: ['allCellVoltages'] },
+  altitudeSpeed: { title: null, selectedFields: ['height', 'vpsHeight'] },
+  battery: { title: null, selectedFields: ['battery', 'batteryTemp'] },
+  cellVoltage: { title: null, selectedFields: ['allCellVoltages', 'batteryVoltage'] },
   attitude: { title: null, selectedFields: ['pitch', 'roll', 'yaw'] },
   rcSignal: { title: null, selectedFields: ['rcSignal'] }, // Will be overridden if uplink/downlink available
   distanceToHome: { title: null, selectedFields: ['distanceToHome'] },
@@ -390,10 +390,21 @@ const DEFAULT_CHART_CONFIGS: TelemetryChartsConfig = {
 };
 
 const CHART_CONFIG_STORAGE_KEY = 'telemetryChartConfigs';
+/** Bump this version to force a one-time reset of saved configs to new defaults */
+const CHART_CONFIG_VERSION = 2;
+const CHART_CONFIG_VERSION_KEY = 'telemetryChartConfigsVersion';
 
 /** Load chart configurations from localStorage */
 function loadChartConfigs(): TelemetryChartsConfig {
   try {
+    // One-time migration: if stored version doesn't match, reset to new defaults
+    const storedVersion = parseInt(localStorage.getItem(CHART_CONFIG_VERSION_KEY) || '0', 10);
+    if (storedVersion < CHART_CONFIG_VERSION) {
+      localStorage.removeItem(CHART_CONFIG_STORAGE_KEY);
+      localStorage.setItem(CHART_CONFIG_VERSION_KEY, String(CHART_CONFIG_VERSION));
+      return { ...DEFAULT_CHART_CONFIGS };
+    }
+
     const stored = localStorage.getItem(CHART_CONFIG_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
