@@ -123,10 +123,10 @@ export function FlightStats({ data }: FlightStatsProps) {
       let content = '';
       switch (format) {
         case 'csv':
-          content = buildCsv(fullData);
+          content = buildCsv(fullData, unitPrefs);
           break;
         case 'json':
-          content = buildJson(fullData);
+          content = buildJson(fullData, unitPrefs);
           break;
         case 'gpx':
           content = buildGpx(fullData);

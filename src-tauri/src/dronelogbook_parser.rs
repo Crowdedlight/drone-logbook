@@ -172,13 +172,14 @@ impl<'a> DroneLogbookParser<'a> {
                     let lower = trimmed.to_lowercase();
                     // The combination of time_s, lat, lng, alt_m, distance_to_home_m is characteristic of our export
                     // Metadata column is optional (for backwards compatibility)
+                    // Add imperial variants to basic and extended columns
                     let has_basic_cols = lower.contains("time_s")
                         && lower.contains("lat")
                         && lower.contains("lng")
-                        && lower.contains("alt_m")
-                        && (lower.contains("distance_to_home_m") || lower.contains("height_m"));
-                    // Additional columns that make our format more unique
+                        && (lower.contains("alt_m") || lower.contains("alt_ft"))
+                        && (lower.contains("distance_to_home_m") || lower.contains("distance_to_home_ft") || lower.contains("height_m") || lower.contains("height_ft"));
                     let has_extended_cols = lower.contains("vps_height_m") 
+                        || lower.contains("vps_height_ft")
                         || lower.contains("rc_aileron") 
                         || lower.contains("metadata");
                     return has_basic_cols && has_extended_cols;
@@ -260,6 +261,12 @@ impl<'a> DroneLogbookParser<'a> {
         // Find metadata and messages column indices
         let metadata_col_idx = headers.iter().position(|h| h.to_lowercase() == "metadata");
         let messages_col_idx = headers.iter().position(|h| h.to_lowercase() == "messages");
+        
+        // Detect units from headers
+        let mut _is_dist_imp = headers.iter().any(|h| h.to_lowercase() == "distance_to_home_ft");
+        let mut is_alt_imp = headers.iter().any(|h| h.to_lowercase() == "alt_ft");
+        let mut is_speed_imp = headers.iter().any(|h| h.to_lowercase() == "speed_mph");
+        let mut is_temp_imp = headers.iter().any(|h| h.to_lowercase() == "battery_temp_f");
 
         // Parse first data row to extract metadata JSON and messages from their columns
         let mut metadata_map: HashMap<String, String> = HashMap::new();
@@ -312,6 +319,22 @@ impl<'a> DroneLogbookParser<'a> {
                                                 }
                                                 log::info!("Parsed {} auto tags and {} manual tags from metadata", 
                                                     imported_auto_tags.len(), imported_manual_tags.len());
+                                            }
+                                            continue;
+                                        } else if key == "units" {
+                                            if let Some(units_obj) = val.as_object() {
+                                                if let Some(dist) = units_obj.get("distance").and_then(|v| v.as_str()) {
+                                                    _is_dist_imp = dist == "imperial";
+                                                }
+                                                if let Some(alt) = units_obj.get("altitude").and_then(|v| v.as_str()) {
+                                                    is_alt_imp = alt == "imperial";
+                                                }
+                                                if let Some(speed) = units_obj.get("speed").and_then(|v| v.as_str()) {
+                                                    is_speed_imp = speed == "imperial";
+                                                }
+                                                if let Some(temp) = units_obj.get("temperature").and_then(|v| v.as_str()) {
+                                                    is_temp_imp = temp == "imperial";
+                                                }
                                             }
                                             continue;
                                         }
@@ -454,12 +477,14 @@ impl<'a> DroneLogbookParser<'a> {
             }
 
             // Track max speed and altitude
-            if let Some(speed) = col_map.get_f64(fields, "speed_ms") {
+            if let Some(speed_raw) = col_map.get_f64(fields, if is_speed_imp { "speed_mph" } else { "speed_ms" }) {
+                let speed = if is_speed_imp { speed_raw / 2.236936 } else { speed_raw };
                 if speed > *max_speed {
                     *max_speed = speed;
                 }
             }
-            if let Some(alt) = col_map.get_f64(fields, "alt_m") {
+            if let Some(alt_raw) = col_map.get_f64(fields, if is_alt_imp { "alt_ft" } else { "alt_m" }) {
+                let alt = if is_alt_imp { alt_raw / 3.28084 } else { alt_raw };
                 if alt > *max_altitude {
                     *max_altitude = alt;
                 }
@@ -471,16 +496,40 @@ impl<'a> DroneLogbookParser<'a> {
                 // Position
                 latitude: lat,
                 longitude: lon,
-                altitude: col_map.get_f64(fields, "alt_m"),
-                height: col_map.get_f64(fields, "height_m"),
-                vps_height: col_map.get_f64(fields, "vps_height_m"),
-                altitude_abs: col_map.get_f64(fields, "altitude_m"),
+                altitude: {
+                    let alt = col_map.get_f64(fields, if is_alt_imp { "alt_ft" } else { "alt_m" });
+                    if is_alt_imp { alt.map(|v| v / 3.28084) } else { alt }
+                },
+                height: {
+                    let h = col_map.get_f64(fields, if is_alt_imp { "height_ft" } else { "height_m" });
+                    if is_alt_imp { h.map(|v| v / 3.28084) } else { h }
+                },
+                vps_height: {
+                    let vps = col_map.get_f64(fields, if is_alt_imp { "vps_height_ft" } else { "vps_height_m" });
+                    if is_alt_imp { vps.map(|v| v / 3.28084) } else { vps }
+                },
+                altitude_abs: {
+                    let alt_abs = col_map.get_f64(fields, if is_alt_imp { "altitude_ft" } else { "altitude_m" });
+                    if is_alt_imp { alt_abs.map(|v| v / 3.28084) } else { alt_abs }
+                },
 
                 // Velocity
-                speed: col_map.get_f64(fields, "speed_ms"),
-                velocity_x: col_map.get_f64(fields, "velocity_x_ms"),
-                velocity_y: col_map.get_f64(fields, "velocity_y_ms"),
-                velocity_z: col_map.get_f64(fields, "velocity_z_ms"),
+                speed: {
+                    let s = col_map.get_f64(fields, if is_speed_imp { "speed_mph" } else { "speed_ms" });
+                    if is_speed_imp { s.map(|v| v / 2.236936) } else { s }
+                },
+                velocity_x: {
+                    let vx = col_map.get_f64(fields, if is_speed_imp { "velocity_x_mph" } else { "velocity_x_ms" });
+                    if is_speed_imp { vx.map(|v| v / 2.236936) } else { vx }
+                },
+                velocity_y: {
+                    let vy = col_map.get_f64(fields, if is_speed_imp { "velocity_y_mph" } else { "velocity_y_ms" });
+                    if is_speed_imp { vy.map(|v| v / 2.236936) } else { vy }
+                },
+                velocity_z: {
+                    let vz = col_map.get_f64(fields, if is_speed_imp { "velocity_z_mph" } else { "velocity_z_ms" });
+                    if is_speed_imp { vz.map(|v| v / 2.236936) } else { vz }
+                },
 
                 // Orientation
                 pitch: col_map.get_f64(fields, "pitch_deg"),
@@ -496,7 +545,10 @@ impl<'a> DroneLogbookParser<'a> {
                 battery_percent: col_map.get_i32(fields, "battery_percent"),
                 battery_voltage: col_map.get_f64(fields, "battery_voltage_v"),
                 battery_current: None, // Not in our CSV export
-                battery_temp: col_map.get_f64(fields, "battery_temp_c"),
+                battery_temp: {
+                    let temp = col_map.get_f64(fields, if is_temp_imp { "battery_temp_f" } else { "battery_temp_c" });
+                    if is_temp_imp { temp.map(|v| (v - 32.0) * 5.0 / 9.0) } else { temp }
+                },
                 cell_voltages: col_map.get_f64_vec(fields, "cell_voltages"),
 
                 // Status

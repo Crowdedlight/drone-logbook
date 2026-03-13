@@ -4,6 +4,7 @@
  */
 
 import type { FlightDataResponse, TelemetryData } from '@/types';
+import type { UnitPreferences } from './utils';
 
 declare const __APP_VERSION__: string;
 
@@ -75,12 +76,21 @@ export function computeDistanceToHomeSeries(telemetry: TelemetryData): (number |
 /**
  * Build CSV export string from flight data
  */
-export function buildCsv(data: FlightDataResponse): string {
+export function buildCsv(data: FlightDataResponse, unitPrefs?: UnitPreferences): string {
   const { telemetry, flight } = data;
+
+  const isDistImp = unitPrefs?.distance === 'imperial';
+  const isAltImp = unitPrefs?.altitude === 'imperial';
+  const isSpeedImp = unitPrefs?.speed === 'imperial';
+  const isTempImp = unitPrefs?.temperature === 'imperial';
+
+  const mToFt = 3.28084;
+  const msToMph = 2.236936;
+  const cToF = (c: number) => c * 9/5 + 32;
 
   // Build metadata JSON for the first row's metadata column
   const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'unknown';
-  const metadata: Record<string, string | number | null | Array<{ tag: string; tag_type: string }>> = {
+  const metadata: Record<string, string | number | null | Array<{ tag: string; tag_type: string }> | object> = {
     format: 'Drone Logbook CSV Export',
     app_version: appVersion,
     exported_at: new Date().toISOString(),
@@ -102,6 +112,12 @@ export function buildCsv(data: FlightDataResponse): string {
     notes: flight.notes ?? null,
     color: flight.color ?? '#7dd3fc',
     tags: flight.tags?.map((t) => ({ tag: t.tag, tag_type: t.tagType })) ?? null,
+    units: unitPrefs ? {
+      distance: unitPrefs.distance,
+      altitude: unitPrefs.altitude,
+      speed: unitPrefs.speed,
+      temperature: unitPrefs.temperature,
+    } : null,
   };
   // Remove null values for cleaner JSON
   const cleanMetadata = Object.fromEntries(Object.entries(metadata).filter(([_, v]) => v != null));
@@ -160,14 +176,18 @@ export function buildCsv(data: FlightDataResponse): string {
   if (!telemetry.time || telemetry.time.length === 0) {
     const homeLat = flight.homeLat ?? '';
     const homeLon = flight.homeLon ?? '';
+    
+    let altVal = flight.maxAltitude != null ? flight.maxAltitude : null;
+    if (altVal != null && isAltImp) altVal *= mToFt;
+    
     const singleRow = [
       '0', // time_s
       String(homeLat),
       String(homeLon),
-      flight.maxAltitude != null ? String(flight.maxAltitude) : '',
+      altVal != null ? String(altVal) : '',
       '0', // distance_to_home at takeoff
       '', '', // height, vps_height
-      flight.maxAltitude != null ? String(flight.maxAltitude) : '',
+      altVal != null ? String(altVal) : '',
       '', '', '', '', // speed, velocities
       '', '', '', '', // battery_percent, battery_voltage_v, battery_temp_c, cell_voltages
       '', // satellites
@@ -245,18 +265,18 @@ export function buildCsv(data: FlightDataResponse): string {
       time % 1 === 0 ? String(time) : time.toFixed(1),
       formatCoord(lat),                              // lat - full precision (DOUBLE)
       formatCoord(lng),                              // lng - full precision (DOUBLE)
-      formatNum(alt, 2),                             // alt_m
-      formatNum(distanceToHome[index], 2),           // distance_to_home_m
-      getMetric(telemetry.height, index, 2),         // height_m
-      getMetric(telemetry.vpsHeight, index, 2),      // vps_height_m
-      getMetric(telemetry.altitude, index, 2),       // altitude_m
-      getMetric(telemetry.speed, index, 2),          // speed_ms
-      getMetric(telemetry.velocityX, index, 2),      // velocity_x_ms
-      getMetric(telemetry.velocityY, index, 2),      // velocity_y_ms
-      getMetric(telemetry.velocityZ, index, 2),      // velocity_z_ms
+      formatNum(!isAltImp ? alt : (alt != null ? alt * mToFt : null), 2),                             // alt_m
+      formatNum(!isDistImp ? distanceToHome[index] : (distanceToHome[index] != null ? distanceToHome[index]! * mToFt : null), 2),           // distance_to_home_m
+      getMetric(!isAltImp ? telemetry.height : telemetry.height?.map(v => v != null ? v * mToFt : null), index, 2),         // height_m
+      getMetric(!isAltImp ? telemetry.vpsHeight : telemetry.vpsHeight?.map(v => v != null ? v * mToFt : null), index, 2),      // vps_height_m
+      getMetric(!isAltImp ? telemetry.altitude : telemetry.altitude?.map(v => v != null ? v * mToFt : null), index, 2),       // altitude_m
+      getMetric(!isSpeedImp ? telemetry.speed : telemetry.speed?.map(v => v != null ? v * msToMph : null), index, 2),          // speed_ms
+      getMetric(!isSpeedImp ? telemetry.velocityX : telemetry.velocityX?.map(v => v != null ? v * msToMph : null), index, 2),      // velocity_x_ms
+      getMetric(!isSpeedImp ? telemetry.velocityY : telemetry.velocityY?.map(v => v != null ? v * msToMph : null), index, 2),      // velocity_y_ms
+      getMetric(!isSpeedImp ? telemetry.velocityZ : telemetry.velocityZ?.map(v => v != null ? v * msToMph : null), index, 2),      // velocity_z_ms
       getValue(telemetry.battery, index),            // battery_percent (integer)
       getMetric(telemetry.batteryVoltage, index, 3), // battery_voltage_v
-      getMetric(telemetry.batteryTemp, index, 1),    // battery_temp_c
+      getMetric(!isTempImp ? telemetry.batteryTemp : telemetry.batteryTemp?.map(v => v != null ? cToF(v) : null), index, 1),    // battery_temp_c
       getArrayValue(telemetry.cellVoltages, index),  // cell_voltages (JSON)
       getValue(telemetry.satellites, index),         // satellites (integer)
       getValue(telemetry.rcSignal, index),           // rc_signal (integer)
@@ -287,20 +307,72 @@ export function buildCsv(data: FlightDataResponse): string {
 /**
  * Build JSON export string from flight data
  */
-export function buildJson(data: FlightDataResponse): string {
+export function buildJson(data: FlightDataResponse, unitPrefs?: UnitPreferences): string {
+  const isDistImp = unitPrefs?.distance === 'imperial';
+  const isAltImp = unitPrefs?.altitude === 'imperial';
+  const isSpeedImp = unitPrefs?.speed === 'imperial';
+  const isTempImp = unitPrefs?.temperature === 'imperial';
+
+  const mToFt = 3.28084;
+  const msToMph = 2.236936;
+  const cToF = (c: number) => c * 9/5 + 32;
+
   const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'unknown';
+  
+  // Clone the data to avoid mutating the original
+  const flight = { ...data.flight };
+  const telemetry = { ...data.telemetry };
+  const track = data.track ? data.track.map(p => [...p] as [number, number, number | null]) : [];
+  
+  // Convert flight metadata if needed
+  if (isDistImp && flight.totalDistance != null) flight.totalDistance *= mToFt;
+  if (isAltImp && flight.maxAltitude != null) flight.maxAltitude *= mToFt;
+  if (isSpeedImp && flight.maxSpeed != null) flight.maxSpeed *= msToMph;
+
+  // Convert telemetry arrays if needed
+  if (isAltImp) {
+    if (telemetry.altitude) telemetry.altitude = telemetry.altitude.map(v => v != null ? v * mToFt : null);
+    if (telemetry.height) telemetry.height = telemetry.height.map(v => v != null ? v * mToFt : null);
+    if (telemetry.vpsHeight) telemetry.vpsHeight = telemetry.vpsHeight.map(v => v != null ? v * mToFt : null);
+    for (const point of track) {
+      if (point[2] != null) point[2] *= mToFt;
+    }
+  }
+  
+  if (isSpeedImp) {
+    if (telemetry.speed) telemetry.speed = telemetry.speed.map(v => v != null ? v * msToMph : null);
+    if (telemetry.velocityX) telemetry.velocityX = telemetry.velocityX.map(v => v != null ? v * msToMph : null);
+    if (telemetry.velocityY) telemetry.velocityY = telemetry.velocityY.map(v => v != null ? v * msToMph : null);
+    if (telemetry.velocityZ) telemetry.velocityZ = telemetry.velocityZ.map(v => v != null ? v * msToMph : null);
+  }
+  
+  if (isTempImp) {
+    if (telemetry.batteryTemp) telemetry.batteryTemp = telemetry.batteryTemp.map(v => v != null ? cToF(v) : null);
+  }
+
+  let distanceToHome = computeDistanceToHomeSeries(data.telemetry);
+  if (isDistImp) {
+    distanceToHome = distanceToHome.map(v => v != null ? v * mToFt : null);
+  }
+
   const exportData = {
     _exportInfo: {
       format: 'Drone Logbook JSON Export',
       appVersion,
       exportedAt: new Date().toISOString(),
+      units: unitPrefs ? {
+        distance: unitPrefs.distance,
+        altitude: unitPrefs.altitude,
+        speed: unitPrefs.speed,
+        temperature: unitPrefs.temperature,
+      } : undefined,
     },
-    flight: data.flight,
-    telemetry: data.telemetry,
-    track: data.track,
+    flight,
+    telemetry,
+    track,
     messages: data.messages,
     derived: {
-      distanceToHome: computeDistanceToHomeSeries(data.telemetry),
+      distanceToHome,
     },
   };
   return JSON.stringify(exportData, null, 2);

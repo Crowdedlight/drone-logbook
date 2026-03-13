@@ -1236,8 +1236,8 @@ export function FlightList({
           flightsData.push({ flight, data });
 
           let content = '';
-          if (format === 'csv') content = buildCsv(data);
-          else if (format === 'json') content = buildJson(data);
+          if (format === 'csv') content = buildCsv(data, unitPrefs);
+          else if (format === 'json') content = buildJson(data, unitPrefs);
           else if (format === 'gpx') content = buildGpx(data);
           else if (format === 'kml') content = buildKml(data);
 
@@ -1556,8 +1556,8 @@ export function FlightList({
       let content = '';
       let extension = format;
 
-      if (format === 'csv') content = buildCsv(data);
-      else if (format === 'json') content = buildJson(data);
+      if (format === 'csv') content = buildCsv(data, unitPrefs);
+      else if (format === 'json') content = buildJson(data, unitPrefs);
       else if (format === 'gpx') content = buildGpx(data);
       else if (format === 'kml') content = buildKml(data);
 
