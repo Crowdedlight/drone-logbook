@@ -8,12 +8,12 @@ on:
         required: false
         type: string
         default: ''
-  workflow_run:
-    workflows:
-      - 'Build Tauri Binaries'
-      - 'Nightly Tauri Build'
-    types:
-      - completed
+  # workflow_run:
+  #   workflows:
+  #     - 'Build Tauri Binaries'
+  #     - 'Nightly Tauri Build'
+  #   types:
+  #     - completed
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
