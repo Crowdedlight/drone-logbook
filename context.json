@@ -106,7 +106,7 @@
       "root": "src",
       "components": {
         "dashboard/Dashboard.tsx": "Main layout: sidebar + content panel, view toggle (Flights/Overview), resizable panels",
-        "dashboard/FlightList.tsx": "Flight list sidebar with search, sort, filters, keyboard navigation, context menu, bulk operations",
+        "dashboard/FlightList.tsx": "Flight list sidebar with search, sort, filters, saved filter profiles, keyboard navigation, context menu, bulk operations",
         "dashboard/FlightStats.tsx": "Selected flight stats bar with metrics, tags, weather button, export dropdown",
         "dashboard/FlightImporter.tsx": "File import area with drag-drop, browse, batch progress, manual entry button, sync button (web)",
         "dashboard/Overview.tsx": "Overview dashboard: stats cards, activity heatmap, pie charts, cluster map, battery health, maintenance tracking",
@@ -320,7 +320,7 @@
       }
     },
     "migrations": "Schema migrations run on startup — add missing columns, type upgrades (DOUBLE→FLOAT), primary key expansions, flight_customizations backfill. Non-destructive: never drops existing data.",
-    "backup_format": "Gzip-compressed tar archive of Parquet files (flights, telemetry, flight_tags, keychains, flight_messages, equipment_names, flight_customizations). Restore uses upsert semantics."
+    "backup_format": "Gzip-compressed tar archive of Parquet files (flights, telemetry, flight_tags, keychains, flight_messages, equipment_names, flight_customizations, settings). Restore uses upsert semantics."
   },
   "features": {
     "import_and_parsing": {
@@ -446,8 +446,9 @@
           "Map area filter (Overview map bounds)",
           "Controller (multi-select — RC serial)"
         ],
+        "saved_profiles": "Saved dropdown + Save filter action for reusable filter presets. Presets are profile-scoped and persisted in the database settings table; None and the currently selected preset are protected from deletion.",
         "inversion": "Filter inversion button: individually negates each active filter using AND logic (NOT A AND NOT B).",
-        "auto_refresh": "Slider ranges and dropdown options auto-refresh after flight deletion."
+        "auto_refresh": "Slider ranges and dropdown options auto-refresh after flight deletion. Manual filter edits reset selected saved preset back to None."
       }
     },
     "overview_dashboard": {
@@ -500,9 +501,10 @@
         "keychains.parquet",
         "flight_messages.parquet",
         "equipment_names.parquet",
-        "flight_customizations.parquet"
+        "flight_customizations.parquet",
+        "settings.parquet"
       ],
-      "restore": "Upsert semantics (delete-then-insert for flights/telemetry, INSERT OR REPLACE for keychains, equipment_names, and flight_customizations)."
+      "restore": "Upsert semantics (delete-then-insert for flights/telemetry, INSERT OR REPLACE for keychains, equipment_names, flight_customizations, and settings)."
     },
     "settings": {
       "preferences": [
@@ -561,7 +563,9 @@
       "GET    /api/settings/smart_tags      — Check smart tags enabled",
       "POST   /api/settings/smart_tags      — Set smart tags enabled (JSON: enabled)",
       "GET    /api/settings/enabled_tag_types  — Get enabled tag types",
-      "POST   /api/settings/enabled_tag_types  — Set enabled tag types (JSON: types)"
+      "POST   /api/settings/enabled_tag_types  — Set enabled tag types (JSON: types)",
+      "GET    /api/settings/value            — Get DB setting by key (query: key)",
+      "POST   /api/settings/value            — Set DB setting (JSON: key, value)"
     ],
     "equipment": [
       "GET    /api/equipment_names     — Get all custom display names",

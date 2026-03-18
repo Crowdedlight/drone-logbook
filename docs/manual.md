@@ -391,6 +391,16 @@ Click the **Filters** header in the sidebar to expand or collapse the filter sec
 - Toggle "Filter by visible map area" in Overview
 - Only shows flights with takeoff location within the current map view
 
+#### Saved Filter Profiles
+
+- Use the **Saved** dropdown to apply a previously saved filter preset
+- Click **Save filter** to store the current scroll-box filter state (date, drone, battery, controller, tags, color, duration, altitude, distance)
+- If you save with an existing name, the preset is overwritten
+- Presets can be deleted from the dropdown using inline confirmation
+- **None** and the currently selected preset cannot be deleted
+- When you manually change filters after applying a preset, selection automatically switches back to **None**
+- Saved filter profiles are stored in the profile's database settings (not browser localStorage)
+
 ### Search
 
 - Type in the search box to filter flights by name

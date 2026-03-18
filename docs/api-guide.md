@@ -144,6 +144,8 @@ The telemetry response includes these arrays (all keyed by index):
 | POST | `/api/settings/smart_tags` | Set smart tags enabled. Body: `{ enabled: boolean }` |
 | GET | `/api/settings/enabled_tag_types` | Get list of enabled smart tag types. |
 | POST | `/api/settings/enabled_tag_types` | Set enabled tag types. Body: `{ types: string[] }` |
+| GET | `/api/settings/value?key={key}` | Get a profile-scoped value from the DB `settings` table. Returns `{ value: string \| null }`. |
+| POST | `/api/settings/value` | Set a profile-scoped value in the DB `settings` table. Body: `{ key, value }` |
 | GET | `/api/has_api_key` | Check if DJI API key is configured. |
 | GET | `/api/api_key_type` | Get API key type: "None", "Default", or "Personal". |
 | POST | `/api/set_api_key` | Save DJI API key. Body: `{ api_key: string }` |
@@ -157,6 +159,8 @@ The telemetry response includes these arrays (all keyed by index):
 | `set_smart_tags_enabled` | `enabled: bool` | Toggle smart tags |
 | `get_enabled_tag_types` | - | Get enabled tag types |
 | `set_enabled_tag_types` | `types: Vec<String>` | Set enabled tag types |
+| `get_setting_value` | `key: String` | Get profile-scoped setting value from DB |
+| `set_setting_value` | `key: String, value: String` | Set profile-scoped setting value in DB |
 | `has_api_key` | - | Check API key presence |
 | `get_api_key_type` | - | Get API key type |
 | `set_api_key` | `api_key: String` | Save API key |
@@ -256,6 +260,8 @@ The backup archive includes:
 - `keychains.parquet` - Cached DJI encryption keys
 - `flight_messages.parquet` - Flight tips and warnings
 - `equipment_names.parquet` - Custom drone/battery names
+- `flight_customizations.parquet` - Persistent renamed titles, notes, colors, and manual tags keyed by file hash
+- `settings.parquet` - Profile-scoped key-value settings (includes saved filter profiles and app flags)
 
 ---
 
